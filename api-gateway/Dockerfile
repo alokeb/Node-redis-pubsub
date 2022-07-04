@@ -16,4 +16,6 @@ RUN npm install
 # RUN npm ci --only=production
 
 
-CMD [ "node", "start.js" ]
+CMD [ "node", "start.mjs" ]
+
+EXPOSE 3000

@@ -1,0 +1,185 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: "2022-07-04T04:47:30Z"
+  generateName: redis-
+  labels:
+    app: redis
+    controller-revision-hash: redis-78766c884f
+    statefulset.kubernetes.io/pod-name: redis-0
+  name: redis-0
+  namespace: redis
+  ownerReferences:
+  - apiVersion: apps/v1
+    blockOwnerDeletion: true
+    controller: true
+    kind: StatefulSet
+    name: redis
+    uid: 504a0c95-1627-4eb2-99f0-bcbacc0b64ea
+  resourceVersion: "48258"
+  uid: 2fe52ac1-cbe7-4c1f-870e-d0143af8ba31
+spec:
+  containers:
+  - args:
+    - /etc/redis/redis.conf
+    command:
+    - redis-server
+    image: redis:6.2.3-alpine
+    imagePullPolicy: IfNotPresent
+    name: redis
+    ports:
+    - containerPort: 6379
+      name: redis
+      protocol: TCP
+    resources: {}
+    terminationMessagePath: /dev/termination-log
+    terminationMessagePolicy: File
+    volumeMounts:
+    - mountPath: /data
+      name: data
+    - mountPath: /etc/redis/
+      name: redis-config
+    - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+      name: kube-api-access-6k6c8
+      readOnly: true
+  dnsPolicy: ClusterFirst
+  enableServiceLinks: true
+  hostname: redis-0
+  initContainers:
+  - args:
+    - |
+      cp /tmp/redis/redis.conf /etc/redis/redis.conf
+
+      echo "finding master..."
+      MASTER_FDQN=`hostname  -f | sed -e 's/redis-[0-9]\./redis-0./'`
+      if [ "$(redis-cli -h sentinel -p 5000 ping)" != "PONG" ]; then
+        echo "master not found, defaulting to redis-0"
+
+        if [ "$(hostname)" == "redis-0" ]; then
+          echo "this is redis-0, not updating config..."
+        else
+          echo "updating redis.conf..."
+          echo "slaveof $MASTER_FDQN 6379" >> /etc/redis/redis.conf
+        fi
+      else
+        echo "sentinel found, finding master"
+        MASTER="$(redis-cli -h sentinel -p 5000 sentinel get-master-addr-by-name mymaster | grep -E '(^redis-\d{1,})|([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})')"
+        echo "master found : $MASTER, updating redis.conf"
+        echo "slaveof $MASTER 6379" >> /etc/redis/redis.conf
+      fi
+    command:
+    - sh
+    - -c
+    image: redis:6.2.3-alpine
+    imagePullPolicy: IfNotPresent
+    name: config
+    resources: {}
+    terminationMessagePath: /dev/termination-log
+    terminationMessagePolicy: File
+    volumeMounts:
+    - mountPath: /etc/redis/
+      name: redis-config
+    - mountPath: /tmp/redis/
+      name: config
+    - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+      name: kube-api-access-6k6c8
+      readOnly: true
+  nodeName: minikube
+  preemptionPolicy: PreemptLowerPriority
+  priority: 0
+  restartPolicy: Always
+  schedulerName: default-scheduler
+  securityContext: {}
+  serviceAccount: default
+  serviceAccountName: default
+  subdomain: redis
+  terminationGracePeriodSeconds: 30
+  tolerations:
+  - effect: NoExecute
+    key: node.kubernetes.io/not-ready
+    operator: Exists
+    tolerationSeconds: 300
+  - effect: NoExecute
+    key: node.kubernetes.io/unreachable
+    operator: Exists
+    tolerationSeconds: 300
+  volumes:
+  - name: data
+    persistentVolumeClaim:
+      claimName: data-redis-0
+  - emptyDir: {}
+    name: redis-config
+  - configMap:
+      defaultMode: 420
+      name: redis-config
+    name: config
+  - name: kube-api-access-6k6c8
+    projected:
+      defaultMode: 420
+      sources:
+      - serviceAccountToken:
+          expirationSeconds: 3607
+          path: token
+      - configMap:
+          items:
+          - key: ca.crt
+            path: ca.crt
+          name: kube-root-ca.crt
+      - downwardAPI:
+          items:
+          - fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+            path: namespace
+status:
+  conditions:
+  - lastProbeTime: null
+    lastTransitionTime: "2022-07-04T04:48:47Z"
+    status: "True"
+    type: Initialized
+  - lastProbeTime: null
+    lastTransitionTime: "2022-07-04T04:48:48Z"
+    status: "True"
+    type: Ready
+  - lastProbeTime: null
+    lastTransitionTime: "2022-07-04T04:48:48Z"
+    status: "True"
+    type: ContainersReady
+  - lastProbeTime: null
+    lastTransitionTime: "2022-07-04T04:47:31Z"
+    status: "True"
+    type: PodScheduled
+  containerStatuses:
+  - containerID: docker://d9d3a9554243da88ef3a99986f701cc138a2b4e22a6df4a234c25da36e2edfd8
+    image: redis:6.2.3-alpine
+    imageID: docker-pullable://redis@sha256:f8f0e809a4281714c33edf86f6da6cc2d4058c8549e44d8c83303c28b3123072
+    lastState: {}
+    name: redis
+    ready: true
+    restartCount: 0
+    started: true
+    state:
+      running:
+        startedAt: "2022-07-04T04:48:47Z"
+  hostIP: 192.168.49.2
+  initContainerStatuses:
+  - containerID: docker://c757dd575aeb2903b4ef8138b21fa55b07f3aa7feda2f96e6c1e90bb7109f6d4
+    image: redis:6.2.3-alpine
+    imageID: docker-pullable://redis@sha256:f8f0e809a4281714c33edf86f6da6cc2d4058c8549e44d8c83303c28b3123072
+    lastState: {}
+    name: config
+    ready: true
+    restartCount: 0
+    state:
+      terminated:
+        containerID: docker://c757dd575aeb2903b4ef8138b21fa55b07f3aa7feda2f96e6c1e90bb7109f6d4
+        exitCode: 0
+        finishedAt: "2022-07-04T04:48:46Z"
+        reason: Completed
+        startedAt: "2022-07-04T04:48:36Z"
+  phase: Running
+  podIP: 172.17.0.9
+  podIPs:
+  - ip: 172.17.0.9
+  qosClass: BestEffort
+  startTime: "2022-07-04T04:47:31Z"

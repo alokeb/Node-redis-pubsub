@@ -5,6 +5,7 @@
   "dependencies": {
     "moleculer": "^0.14.21",
     "moleculer-web": "^0.10.4",
+    "ioredis": "^5.1.0",
     "nats": "^2.7.1"
   }
 }

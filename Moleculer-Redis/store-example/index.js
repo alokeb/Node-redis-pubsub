@@ -21,7 +21,7 @@ brokerNode1.createService({
       {
         aliases: {
           // When the "GET /products" request is made the "listProducts" action of "products" service is executed
-          "GET /products": "products.listPcd roducts"
+          "GET /products": "products.listProducts"
         }
       }
     ]

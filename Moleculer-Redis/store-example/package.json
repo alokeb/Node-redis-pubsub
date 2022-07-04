@@ -1,0 +1,10 @@
+{
+  "name": "moleculer-store",
+  "description": "Simple store example using moleculer framework",
+  "license": "MIT",
+  "dependencies": {
+    "moleculer": "^0.14.21",
+    "moleculer-web": "^0.10.4",
+    "nats": "^2.7.1"
+  }
+}

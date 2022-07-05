@@ -11,11 +11,7 @@ COPY . /usr/src/moleculer
 COPY package*.json /usr/src/moleculer
 
 RUN npm install
-#RUN npm i express socket.io kafka-node
-# If you are building your code for production
-# RUN npm ci --only=production
 
+COPY . .
 
-CMD [ "node", "start.mjs" ]
-
-EXPOSE 3000
+CMD ["node", "index.js"]

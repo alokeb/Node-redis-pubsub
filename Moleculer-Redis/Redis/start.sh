@@ -1,6 +1,5 @@
 #!/bin/sh
 
-minikube stop
 minikube start
 #Create namespace
 kubectl create ns redis

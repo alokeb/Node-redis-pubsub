@@ -1,0 +1,13 @@
+{
+  "name": "moleculer-gateway",
+  "version": "0.0.1",
+  "description": "Moleculer demo",
+  "author": "Aloke Bhatnagar <alokeb@gmail.com>",
+  "main": "start.js",
+  "scripts": {
+    "start": "start.js"
+  },
+  "dependencies": {
+    "socket.io-client": "^4.5.1"
+  }
+}

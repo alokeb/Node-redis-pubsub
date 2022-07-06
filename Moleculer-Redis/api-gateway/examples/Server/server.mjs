@@ -4,7 +4,7 @@ import { createClient } from "redis";
 
 const io = new Server();
 
-const pubClient = createClient({ url: "redis://localhost:30000" });
+const pubClient = createClient({ url: "redis://localhost:6379" });
 console.log("Connected to Redis");
 const subClient = pubClient.duplicate();
 

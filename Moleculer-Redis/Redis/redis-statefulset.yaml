@@ -4,9 +4,6 @@ metadata:
   name: redis
 spec:
   serviceName: redis
-  annotations:
-    service-per-pod-label: "redis-pod"
-    service-per-pod-ports: "6379:6379"
   replicas: 3
   selector:
     matchLabels:

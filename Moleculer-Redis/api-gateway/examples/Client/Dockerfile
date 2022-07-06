@@ -14,4 +14,4 @@ RUN npm install
 
 COPY . .
 
-CMD ["node", "client.js"]
+CMD ["node", "client.mjs"]

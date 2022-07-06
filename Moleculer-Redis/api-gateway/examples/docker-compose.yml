@@ -1,27 +1,10 @@
 version: '3.9'
 
 services:
-  redis:
-    image: redis:alpine
-    networks:
-        - overlay
-    deploy:
-      replicas: 6
-      placement:
-        max_replicas_per_node: 1
-      update_config:
-        parallelism: 2
-        delay: 10s
-      restart_policy:
-        condition: on-failure
-        delay: 5s
-        max_attempts: 3
-        window: 120s
-
   server:
     container_name: server
-    depends_on:
-      - redis
+    #depends_on: 
+    #  - redis
     build: 
       context: ./Server
     networks:
@@ -51,7 +34,6 @@ services:
     container_name: client
     depends_on:
       - server
-      - redis
     build: 
       context: ./Client
     networks:

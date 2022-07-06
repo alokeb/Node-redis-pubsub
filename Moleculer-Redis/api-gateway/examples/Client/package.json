@@ -1,13 +1,10 @@
 {
-  "name": "moleculer-gateway",
-  "version": "0.0.1",
-  "description": "Moleculer demo",
-  "author": "Aloke Bhatnagar <alokeb@gmail.com>",
-  "main": "start.js",
-  "scripts": {
-    "start": "start.js"
-  },
+  "name": "client",
+  "description": "",
+  "license": "MIT",
   "dependencies": {
-    "socket.io-client": "^4.5.1"
+    "socket.io": "^4.5.1",
+    "redis": "^4.2.0",
+    "@socket.io/redis-emitter": "^4.1.1"
   }
 }

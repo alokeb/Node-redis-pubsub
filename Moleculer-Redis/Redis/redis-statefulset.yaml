@@ -4,6 +4,9 @@ metadata:
   name: redis
 spec:
   serviceName: redis
+  annotations:
+    service-per-pod-label: "redis-pod"
+    service-per-pod-ports: "6379:6379"
   replicas: 3
   selector:
     matchLabels:
@@ -15,7 +18,7 @@ spec:
     spec:
       initContainers:
       - name: config
-        image: redis:latest
+        image: redis:6.2.3-alpine
         command: [ "sh", "-c" ]
         args:
           - |

@@ -14,7 +14,7 @@ redisClient.connect().then(() => {
   const size = fruits.length;
 
   setInterval(() => {
-    let current = Math.floor(Math.random() * size);
+    
   
     let fruit = fruits[current];
     //emitter.emit("time", date);

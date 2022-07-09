@@ -14,4 +14,4 @@ RUN npm install
 
 COPY . .
 
-CMD ["node", "month-publisher-service.mjs"]
+CMD ["node", "client-service.mjs"]

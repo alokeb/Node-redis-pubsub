@@ -19,34 +19,41 @@ services:
       context: ./Server
     ports:
       - target: 3000
+        published: 4000
+        protocol: tcp
+        mode: host
+
+  fruit-service:
+    container_name: fruit-service
+    
+    build: 
+      context: ./Fruit-server
+    ports:
+      - target: 3000
+        published: 3001
+        protocol: tcp
+        mode: host
+  
+  month-service:
+    container_name: month-service
+    
+    build: 
+      context: ./Month-server
+    
+    ports:
+      - target: 3000
         published: 3002
         protocol: tcp
         mode: host
 
-  fruit-publisher:
-    container_name: fruit-publisher
-    depends_on:
-      - redis
-      - server
+  client:
+    container_name: client
     build: 
-      context: ./Fruit-publisher
-    
+      context: ./Client
+    depends_on:
+      - server
     ports:
       - target: 3000
         published: 3000
-        protocol: tcp
-        mode: host
-  
-  month-publisher:
-    container_name: month-publisher
-    depends_on:
-      - redis
-      - server
-    build: 
-      context: ./Month-publisher
-    
-    ports:
-      - target: 3001
-        published: 3001
         protocol: tcp
         mode: host

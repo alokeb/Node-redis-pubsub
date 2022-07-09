@@ -1,0 +1,52 @@
+version: '3.9'
+
+services:
+  redis:
+    container_name: redis
+    build: 
+      context: ../Redis
+    ports:
+      - target: 6397
+        published: 6397
+        protocol: tcp
+        mode: host
+
+  server:
+    container_name: server
+    depends_on: 
+      - redis
+    build: 
+      context: ./Server
+    ports:
+      - target: 3000
+        published: 3002
+        protocol: tcp
+        mode: host
+
+  fruit-publisher:
+    container_name: fruit-publisher
+    depends_on:
+      - redis
+      - server
+    build: 
+      context: ./Fruit-publisher
+    
+    ports:
+      - target: 3000
+        published: 3000
+        protocol: tcp
+        mode: host
+  
+  month-publisher:
+    container_name: month-publisher
+    depends_on:
+      - redis
+      - server
+    build: 
+      context: ./Month-publisher
+    
+    ports:
+      - target: 3001
+        published: 3001
+        protocol: tcp
+        mode: host

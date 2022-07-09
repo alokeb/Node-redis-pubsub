@@ -4,8 +4,7 @@ import { createClient } from "redis";
 
 const io = new Server();
 
-const pubClient = createClient({ url: "redis://localhost:6379" });
-console.log("Connected to Redis");
+const pubClient = createClient({ url: "redis://redis:6379" });
 const subClient = pubClient.duplicate();
 
 io.adapter(createAdapter(pubClient, subClient));

@@ -2,6 +2,7 @@ var http = require('http');
 
 const fruits = ["Strawberry", "Apple", "Banana"];
 const size = fruits.length;
+const port = process.env.PORT || 3000;
 
 var server = http.createServer(function (req, res) {   //create web server
     if (req.url == '/') { //check the URL of the current request
@@ -17,5 +18,5 @@ var server = http.createServer(function (req, res) {   //create web server
     }
 });
 
-server.listen(3000);
-console.log("Fruit server started");
+server.listen(port);
+console.log("Fruit server started at port:", port);

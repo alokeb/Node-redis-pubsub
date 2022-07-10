@@ -1,17 +1,15 @@
 FROM node:alpine
 
 # Create app directory
-RUN mkdir -p /usr/src/fruit-service
-WORKDIR /usr/src/fruit-service
+RUN mkdir -p /app
+WORKDIR /app
 
 # Bundle app source
-COPY . /usr/src/fruit-service
+COPY . /app
 
-# Install app dependencies
-COPY package*.json /usr/src/fruit-service
-
-RUN npm install
+# Set the application port to 3000
+ENV PORT="3000"
 
 COPY . .
 
-CMD ["node", "fruit-service.js"]
+CMD ["npm", "start"]

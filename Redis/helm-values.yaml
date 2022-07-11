@@ -43,7 +43,7 @@ commonAnnotations: {}
 secretAnnotations: {}
 ## @param clusterDomain Kubernetes cluster domain name
 ##
-clusterDomain: cluster.local
+clusterDomain: redis-cluster.local
 ## @param extraDeploy Array of extra objects to deploy with the release
 ##
 extraDeploy: []
@@ -100,16 +100,16 @@ image:
 ## https://github.com/bitnami/bitnami-docker-redis#configuration
 ##
 
-## @param architecture Redis&reg; architecture. Allowed values: `standalone` or `replication`
+## @param architecture Redis&reg; architecture. Allowed values: `standalone` or `replication` - setting to standalone for POC
 ##
-architecture: replication
+architecture: standalone
 ## Redis&reg; Authentication parameters
 ## ref: https://github.com/bitnami/bitnami-docker-redis#setting-the-server-password-on-first-run
 ##
 auth:
   ## @param auth.enabled Enable password authentication
   ##
-  enabled: true
+  enabled: false
   ## @param auth.sentinel Enable password authentication on sentinels too
   ##
   sentinel: true
@@ -453,7 +453,7 @@ master:
   service:
     ## @param master.service.type Redis&reg; master service type
     ##
-    type: ClusterIP
+    type: NodePort
     ## @param master.service.ports.redis Redis&reg; master service port
     ##
     ports:
@@ -947,7 +947,7 @@ sentinel:
     debug: false
   ## @param sentinel.masterSet Master set name
   ##
-  masterSet: mymaster
+  masterSet: sentinel-master
   ## @param sentinel.quorum Sentinel Quorum
   ##
   quorum: 2
@@ -1125,7 +1125,7 @@ sentinel:
   service:
     ## @param sentinel.service.type Redis&reg; Sentinel service type
     ##
-    type: ClusterIP
+    type: LoadBalancer
     ## @param sentinel.service.ports.redis Redis&reg; service port for Redis&reg;
     ## @param sentinel.service.ports.sentinel Redis&reg; service port for Redis&reg; Sentinel
     ##
@@ -1140,8 +1140,8 @@ sentinel:
     ##       If setting manually, please leave at least replica.replicaCount + 1 in between sentinel.service.nodePorts.redis and sentinel.service.nodePorts.sentinel to take into account the ports that will be created while incrementing that base port
     ##
     nodePorts:
-      redis: ""
-      sentinel: ""
+      redis: "6379"
+      sentinel: "26379"
     ## @param sentinel.service.externalTrafficPolicy Redis&reg; Sentinel service external traffic policy
     ## ref: https://kubernetes.io/docs/tasks/access-application-cluster/create-external-load-balancer/#preserving-the-client-source-ip
     ##

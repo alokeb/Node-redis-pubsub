@@ -8,3 +8,6 @@ services:
         published: 30000
         protocol: tcp
         mode: host
+    environment:
+      - FRUITS = ["Strawberry", "Apple", "Banana"]
+      - MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]

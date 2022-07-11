@@ -1,7 +1,7 @@
 var http = require('http'); 
 
-const fruits = ["Strawberry", "Apple", "Banana"];
-const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const fruits = process.env.FRUIT 
+const months = process.env.MONTH
 const fruitssize = fruits.length;
 const monthssize = months.length;
 const port = process.env.PORT || 3000;
@@ -14,9 +14,9 @@ var server = http.createServer(function (req, res) {   //create web server
         let currentMonth = Math.floor(Math.random() * monthssize);
         let fruit = fruits[currentFruit];
         let month = months[currentMonth];
-        let response = [currentFruit, currentMonth]
+        let response = {fruit, month}
         
-        res.writeHead(200, { 'Content-Type': 'text/json' });
+        res.writeHead(200, { 'Content-Type': 'application/json' });
         res.write(JSON.stringify(response));
         res.end();
 

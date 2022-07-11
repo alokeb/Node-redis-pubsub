@@ -100,9 +100,9 @@ image:
 ## https://github.com/bitnami/bitnami-docker-redis#configuration
 ##
 
-## @param architecture Redis&reg; architecture. Allowed values: `standalone` or `replication` - setting to standalone for POC
+## @param architecture Redis&reg; architecture. Allowed values: `standalone` or `replication`
 ##
-architecture: standalone
+architecture: replication
 ## Redis&reg; Authentication parameters
 ## ref: https://github.com/bitnami/bitnami-docker-redis#setting-the-server-password-on-first-run
 ##

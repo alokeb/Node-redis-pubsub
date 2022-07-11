@@ -22,11 +22,15 @@ export NODE_PORT=$(kubectl get --namespace default -o jsonpath="{.spec.ports[0].
 export NODE_IP=$(kubectl get nodes --namespace default -o jsonpath="{.items[0].status.addresses[0].address}")
 echo "Month server URL: http://$NODE_IP:$NODE_PORT/"
 
+#Kong API Gateway
+kubectl create namespace kong
+
 #Redis
 helm upgrade -i --namespace=node-redis-pubsub redis-cluster bitnami/redis --values=Redis/helm-values.yaml
 export NODE_IP=$(kubectl get nodes --namespace node-redis-pubsub -o jsonpath="{.items[0].status.addresses[0].address}")
 export NODE_PORT=$(kubectl get --namespace node-redis-pubsub -o jsonpath="{.spec.ports[0].nodePort}" services redis-cluster-master)
 echo "To connect to redis use redis-cli -h $NODE_IP -p $NODE_PORT"
+
 
 #HAProxy
 helm upgrade -i --namespace=node-redis-pubsub redis-haproxy bitnami/haproxy  --values=Redis/haproxy-helm-values.yaml

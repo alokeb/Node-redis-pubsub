@@ -1,59 +1,25 @@
 version: '3.9'
-
 services:
   redis:
-    container_name: redis
-    build: 
-      context: ../Redis
-    ports:
-      - target: 6397
-        published: 6397
-        protocol: tcp
-        mode: host
+    extends: 
+      file: ../Redis/docker-compose.yml
+      service: redis
+      
+  harvest-service:
+    extends:
+      file: Harvest-server/docker-compose.yml
+      service: harvest-service
 
   server:
-    container_name: server
-    depends_on: 
-      - redis
-    build: 
-      context: ./Server
-    ports:
-      - target: 3000
-        published: 4000
-        protocol: tcp
-        mode: host
-
-  fruit-service:
-    container_name: fruit-service
-    
-    build: 
-      context: ./Fruit-server
-    ports:
-      - target: 3000
-        published: 30001
-        protocol: tcp
-        mode: host
-  
-  month-service:
-    container_name: month-service
-    
-    build: 
-      context: ./Month-server
-    
-    ports:
-      - target: 3000
-        published: 30002
-        protocol: tcp
-        mode: host
-
-  client:
-    container_name: client
-    build: 
-      context: ./Client
+    extends:
+      file: Server/docker-compose.yml
+      service: server
     depends_on:
-      - server
-    ports:
-      - target: 3000
-        published: 30000
-        protocol: tcp
-        mode: host
+        - redis
+  
+  client:
+    extends:
+      file: Client/docker-compose.yml
+      service: client
+    depends_on:
+        - server

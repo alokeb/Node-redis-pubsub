@@ -1,0 +1,12 @@
+version: '3.9'
+
+services:
+  server:
+    container_name: server
+    build: 
+      context: .
+    ports:
+      - target: 3000
+        published: 30001
+        protocol: tcp
+        mode: host

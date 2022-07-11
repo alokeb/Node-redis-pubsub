@@ -1,0 +1,10 @@
+services:
+  redis:
+    container_name: redis
+    build: 
+      context: .
+    ports:
+      - target: 6379
+        published: 6379
+        protocol: tcp
+        mode: host

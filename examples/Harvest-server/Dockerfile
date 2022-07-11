@@ -1,4 +1,4 @@
-FROM node:lts-alpine
+FROM bitnami/node:13
 
 # Copy the application code
 COPY . /app

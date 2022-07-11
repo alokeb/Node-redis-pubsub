@@ -1,7 +1,7 @@
 var http = require('http'); 
 
-const fruits = process.env.FRUIT 
-const months = process.env.MONTH
+const fruits = process.env.FRUIT ||  ["Strawberry", "Apple", "Banana"];
+const months = process.env.MONTH || ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const fruitssize = fruits.length;
 const monthssize = months.length;
 const port = process.env.PORT || 3000;

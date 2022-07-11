@@ -1,12 +1,12 @@
 version: '3.9'
 
 services:
-  client:
-    container_name: client
+  socketio-client:
+    container_name: socketio-client
     build: 
       context: .
     ports:
       - target: 3000
-        published: 30002
+        published: 30003
         protocol: tcp
         mode: host

@@ -14,10 +14,6 @@ redisClient.connect().then(() => {
   const size = fruits.length;
 
   setInterval(() => {
-    
-  
-    let fruit = fruits[current];
-    //emitter.emit("time", date);
-    console.log("fruit:", fruit);
+    console.log("currentHarvest");
   }, 500);
 });

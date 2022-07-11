@@ -17,9 +17,16 @@ services:
     depends_on:
         - redis
   
-  client:
+  http-client:
     extends:
-      file: Client/docker-compose.yml
-      service: client
+      file: HTTPClient/docker-compose.yml
+      service: http-client
+    depends_on:
+        - server
+
+  socketio-client:
+    extends:
+      file: SocketIOClient/docker-compose.yml
+      service: socketio-client
     depends_on:
         - server

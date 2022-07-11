@@ -1,17 +1,18 @@
-FROM node:alpine
+FROM bitnami/node:13
 
-# Create app directory
-RUN mkdir -p /usr/src/month-service
-WORKDIR /usr/src/month-service
+# Copy the application code
+COPY . /app
 
-# Bundle app source
-COPY . /usr/src/month-service
+# Set working directory
+WORKDIR /app
 
-# Install app dependencies
-COPY package*.json /usr/src/month-service
+# Create a non-root user
+RUN useradd -r -u 1001 -g root nonroot
+RUN chown -R nonroot /app
+USER nonroot
 
-RUN npm install
+# Set the application port to 3000
+ENV PORT="3000"
 
-COPY . .
-
-CMD ["node", "month-service.js"]
+# Start the application
+CMD ["npm", "start"]

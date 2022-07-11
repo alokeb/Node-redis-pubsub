@@ -1,15 +1,18 @@
-FROM node:alpine
+FROM bitnami/node:13
 
-# Create app directory
-RUN mkdir -p /app
+# Copy the application code
+COPY . /app
+
+# Set working directory
 WORKDIR /app
 
-# Bundle app source
-COPY . /app
+# Create a non-root user
+RUN useradd -r -u 1001 -g root nonroot
+RUN chown -R nonroot /app
+USER nonroot
 
 # Set the application port to 3000
 ENV PORT="3000"
 
-COPY . .
-
+# Start the application
 CMD ["npm", "start"]

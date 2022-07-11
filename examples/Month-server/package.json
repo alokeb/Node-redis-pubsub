@@ -1,5 +1,8 @@
 {
   "name": "month-server",
   "description": "A simple application that returns a random month from an enum",
-  "license": "MIT"
+  "license": "MIT",
+  "scripts": {
+    "start": "node month-service.js"
+  }
 }

@@ -1,3 +1,11 @@
+getAppFromExternalRepository: false
+## @param repository Git repository http/https url
+##
+repository: https://github.com/alokeb/Node-redis-pubsub.git
+## @param revision Git repository revision to checkout
+##
+revision: master
+
 ## @section Global parameters
 ## Global Docker image parameters
 ## Please, note that this will override the image parameters, including dependencies, configured to use the global value
@@ -23,7 +31,7 @@ global:
 kubeVersion: ""
 ## @param nameOverride String to partially override node.fullname template (will maintain the release name)
 ##
-nameOverride: ""
+nameOverride: "month-server"
 ## @param fullnameOverride String to fully override node.fullname template
 ##
 fullnameOverride: ""
@@ -66,59 +74,10 @@ extraEnvVarsCM: ""
 ##
 extraEnvVarsSecret: ""
 ## MongoDB&reg; chart configuration
+mongodb:
+  install: false
 ## ref: https://github.com/bitnami/charts/blob/master/bitnami/mongodb/values.yaml
 ##
-mongodb:
-  ## @param mongodb.enabled Whether to install or not the MongoDB&reg; chart
-  ## To use an external database set this to false and configure the externaldb parameters
-  ##
-  enabled: true
-  ## MongoDB&reg; Authentication parameters
-  ##
-  auth:
-    ## @param mongodb.auth.enabled Whether to enable auth or not for the MongoDB&reg; chart
-    ## ref: https://docs.mongodb.com/manual/tutorial/enable-authentication/
-    ##
-    enabled: true
-    ## @param mongodb.auth.rootPassword MongoDB&reg; admin password
-    ## ref: https://github.com/bitnami/bitnami-docker-mongodb/blob/master/README.md#setting-the-root-password-on-first-run
-    ##
-    rootPassword: ""
-    ## @param mongodb.auth.username MongoDB&reg; custom user
-    ## ref: https://github.com/bitnami/bitnami-docker-mongodb/blob/master/README.md#creating-a-user-and-database-on-first-run
-    ##
-    username: user
-    ## @param mongodb.auth.database MongoDB&reg; custom database
-    ##
-    database: test_db
-    ## @param mongodb.auth.password MongoDB&reg; custom password
-    ##
-    password: secret_password
-## External Database Configuration
-## Provision an external database
-## You have two alternatives:
-##    1) Pass an already existing Secret with your database credentials
-##    2) Pass an already existing ServiceInstance name and specify the service catalog broker to automatically create a ServiceBinding for your application.
-##
-externaldb:
-  ## @param externaldb.enabled Enables or disables external database (ignored if `mongodb.enabled=true`)
-  ##
-  enabled: false
-  ## @param externaldb.ssl Set to true if your external database has ssl enabled
-  ##
-  ssl: false
-  ## @param externaldb.secretName Secret containing existing database credentials
-  ## Please refer to the respective section in the README to know the details about this secret.
-  ##
-  secretName: ""
-  ## @param externaldb.type Only if using Kubernetes Service Catalog you can specify the kind of broker used. Available options are osba|gce|aws
-  ##
-  type: osba
-  ## @param externaldb.broker.serviceInstanceName If you provide the serviceInstanceName, the chart will create a ServiceBinding for that ServiceInstance
-  ##
-  broker:
-    serviceInstanceName: ""
-
 ## @section Node deployment parameters
 
 ## Bitnami node image version
@@ -132,8 +91,8 @@ externaldb:
 ##
 image:
   registry: docker.io
-  repository: bitnami/node
-  tag: 16.16.0-debian-11-r0
+  repository: alokeb/month-server
+  tag: latest
   ## Specify a imagePullPolicy
   ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
   ## ref: https://kubernetes.io/docs/user-guide/images/#pre-pulling-images
@@ -443,14 +402,6 @@ git:
 ## @param getAppFromExternalRepository Enable to download app from external git repository
 ## Disable it if your docker image already includes your application at /app
 ##
-getAppFromExternalRepository: true
-## @param repository Git repository http/https url
-##
-repository: https://github.com/bitnami/sample-mean.git
-## @param revision Git repository revision to checkout
-##
-revision: master
-
 ## @section Volume permissions parameters
 
 ## Init containers parameters:
@@ -534,7 +485,7 @@ persistence:
     - ReadWriteOnce
   ## @param persistence.size PVC Storage Request
   ##
-  size: 1Gi
+  size: 5Mi
   ## @param persistence.annotations Annotations for the PVC
   ##
   annotations: {}
@@ -546,7 +497,7 @@ persistence:
 service:
   ## @param service.type Kubernetes Service type
   ##
-  type: ClusterIP
+  type: NodePort
   ## @param service.ports.http Kubernetes Service port
   ##
   ports:
@@ -569,7 +520,7 @@ service:
   ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#type-nodeport
   ##
   nodePorts:
-    http: ""
+    http: "30002"
   ## @param service.extraPorts Extra ports to expose (normally used with the `sidecar` value)
   ##
   extraPorts: []
@@ -598,7 +549,7 @@ service:
 ingress:
   ## @param ingress.enabled Set to true to enable ingress record generation
   ##
-  enabled: false
+  enabled: true
 
   ## @param ingress.ingressClassName IngressClass that will be be used to implement the Ingress (Kubernetes 1.18+)
   ## This is supported in Kubernetes 1.18+ and required if you have more than one IngressClass marked as the default for your cluster .
@@ -613,7 +564,7 @@ ingress:
   apiVersion: ""
   ## @param ingress.hostname When the ingress is enabled, a host pointing to this will be created
   ##
-  hostname: node.local
+  hostname: month-server.local
   ## @param ingress.path The Path to Node.js. You may need to set this to '/*' in order to use this with ALB ingress controllers.
   ##
   path: /
@@ -624,11 +575,11 @@ ingress:
   ## ref: https://cert-manager.io/docs/usage/ingress/#supported-annotations
   ##
   ## e.g:
-  ## annotations:
-  ##   kubernetes.io/ingress.class: nginx
+  annotations:
+    kubernetes.io/ingress.class: nginx
   ##   cert-manager.io/cluster-issuer: cluster-issuer-name
   ##
-  annotations: {}
+  #annotations: {}
   ## @param ingress.tls Enable TLS configuration for the hostname defined at ingress.hostname parameter
   ## TLS certificates will be retrieved from a TLS secret with name: {{- printf "%s-tls" .Values.ingress.hostname }}
   ## You can use the ingress.secrets parameter to create this TLS secret or rely on cert-manager to create it

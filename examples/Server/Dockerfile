@@ -1,17 +1,19 @@
-FROM node:alpine
+FROM node:bullseye-slim
 
-# Create app directory
-RUN mkdir -p /usr/src/server
-WORKDIR /usr/src/server
+RUN mkdir -p /app
+WORKDIR /app
 
 # Bundle app source
-COPY . /usr/src/server
+COPY . /app
+
+# Set the application port to 3000
+ENV PORT="3000"
 
 # Install app dependencies
-COPY package*.json /usr/src/server
-
+COPY package*.json /app
 RUN npm install
 
 COPY . .
 
-CMD ["node", "server.mjs"]
+# Start the application
+CMD ["npm", "start"]

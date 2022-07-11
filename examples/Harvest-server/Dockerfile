@@ -1,18 +1,19 @@
-FROM bitnami/node:13
+FROM node:bullseye-slim
 
-# Copy the application code
-COPY . /app
-
-# Set working directory
+RUN mkdir -p /app
 WORKDIR /app
 
-# Create a non-root user
-RUN useradd -r -u 1001 -g root nonroot
-RUN chown -R nonroot /app
-USER nonroot
+# Bundle app source
+COPY . /app
 
 # Set the application port to 3000
 ENV PORT="3000"
+
+# Install app dependencies
+COPY package*.json /app
+RUN npm install
+
+COPY . .
 
 # Start the application
 CMD ["npm", "start"]

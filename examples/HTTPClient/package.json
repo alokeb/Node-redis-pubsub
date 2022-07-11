@@ -1,5 +1,8 @@
 {
   "name": "client",
   "description": "",
-  "license": "ISC"
+  "license": "ISC",
+  "scripts": {
+    "start": "node client-service.mjs"
+  }
 }

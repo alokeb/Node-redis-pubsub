@@ -1,17 +1,16 @@
+import { Server } from "socket.io";
+import { createAdapter } from "@socket.io/redis-adapter";
 import { createClient } from "redis";
 
 const PORT = process.env.PORT || 3000;
 const PORT_REDIS = process.env.PORT || 6379;
-
-const fruits = ["Strawberry", "Apple", "Banana"];
 const redisClient = createClient({ url: "redis://redis:6379" });
 
-redisClient.connect().then(() => {
-  const emitter = new Emitter(redisClient);
-  const size = fruits.length;
+const io = new Server();
 
-  setInterval(() => {
-    //TODO: Implement
-    console.log("currentHarvest");
-  }, 500);
-});
+const pubClient = createClient({ url: "redis://redis:6379" });
+const subClient = pubClient.duplicate();
+
+io.adapter(createAdapter(pubClient, subClient));
+io.listen(PORT);
+console.log("Gateway service listening on port", PORT);

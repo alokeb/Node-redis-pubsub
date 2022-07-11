@@ -1,17 +1,18 @@
-FROM node:alpine
+FROM bitnami/node:18
 
-# Create app directory
-RUN mkdir -p /usr/src/client
-WORKDIR /usr/src/client
+# Copy the application code
+COPY . /app
 
-# Bundle app source
-COPY . /usr/src/client
+# Set working directory
+WORKDIR /app
 
-# Install app dependencies
-COPY package*.json /usr/src/client
+# Create a non-root user
+RUN useradd -r -u 1001 -g root nonroot
+RUN chown -R nonroot /app
+USER nonroot
 
-RUN npm install
+# Set the application port to 3000
+ENV PORT="3000"
 
-COPY . .
-
-CMD ["node", "client-service.mjs"]
+# Start the application
+CMD ["npm", "start"]

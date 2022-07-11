@@ -1,12 +1,12 @@
 version: '3.9'
 
 services:
-  http-client:
-    container_name: http-client
+  api-gateway:
+    container_name: api-gateway
     build: 
       context: .
     ports:
       - target: 3000
-        published: 30002
+        published: 30000
         protocol: tcp
         mode: host

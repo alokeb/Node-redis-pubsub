@@ -1,29 +1,33 @@
-//App specific constants
-var constants = require('./constants');
-
 //Node core
 const cluster = require("cluster");
 const http = require("http");
-
-const numCPUs = require("os").cpus().length;
 
 //External
 const { Server } = require("socket.io");
 const io = new Server();
 const { setupMaster, setupWorker } = require("@socket.io/sticky");
 const { createAdapter, setupPrimary } = require("@socket.io/cluster-adapter");
-//const { createAdapter, setupPrimary } = require("@socket.io/redis-adapter"); //In case we decide to use redis for session stickiness as well as pub-sub
+//TODO: See if we can use redis/kafka for the socket.io sticky cluster
+//const { createAdapter } = require("@socket.io/redis-adapter"); //In case we decide to use redis for session stickiness as well as pub-sub
 //const kafka = require("socket.io-kafka"'); //In case we decide to use Kafka as our pub-sub system later...
+
+
+//Gateway configuration
+const numClusterWorkers = process.env.NUM_GATEWAY_CLUSTER_WORKERS || Math.max(require("os").cpus().length/2, 2); //Minimum of two workers by default
+const GATEWAY_PORT = process.env.GATEWAY_PORT || 3000;
+
+//Redis configuration
+const REDIS_HOST = "redis";
+const publisherRedisChannel = "publisherRedisChannel";
+const subscriberRedisChannel = "subscriberRedisChannel";
+const REDIS_PORT = process.env.REDIS_PORT || 6379;
+const redisURL = { url: `redis://${REDIS_HOST}:${REDIS_PORT}` };
+
 const { createClient } = require("redis");
-
-const PORT = process.env.PORT || 3000;
-const PORT_REDIS = process.env.PORT || 6379;
-const redisClient = createClient({ url: "redis://redis:6379" });
-
+const redisClient = createClient(redisURL);
 
 if (cluster.isMaster) {
-  console.log(`Master ${process.pid} is running`);
-
+  console.log(`Master pid: ${process.pid} is running`);
   const httpServer = http.createServer();
 
   // setup sticky sessions
@@ -44,19 +48,18 @@ if (cluster.isMaster) {
    serialization: "advanced",
   });
 
-  httpServer.listen(PORT);
+  httpServer.listen(GATEWAY_PORT);
 
-  //Create 1 master + numCPUs workers
-  for (let i = 0; i < numCPUs; i++) {
+  for (let i = 0; i < numClusterWorkers ; i++) {
     cluster.fork();
   }
 
   cluster.on("exit", (worker) => {
-    console.log(`Worker ${worker.process.pid} died`);
+    console.log(`Worker pid: ${worker.process.pid} died`);
     cluster.fork();
   });
 } else {
-  console.log(`Worker ${process.pid} started`);
+  console.log(`Worker pid: ${process.pid} started`);
 
   const httpServer = http.createServer();
   const io = new Server(httpServer);
@@ -69,16 +72,15 @@ if (cluster.isMaster) {
 
   io.on("connection", (socket) => {
     //Create new pub/sub Redis clients per connection
-    const pubClient = createClient({ url: "redis://redis:6379" });
+    const pubClient = createClient(redisURL);
     const subClient = pubClient.duplicate();
-    
+
+    //Bi-directional pub-sub so publisher and subscriber are listening to each other's messages
+    pubClient.subscribe(subscriberRedisChannel);
+    subClient.subscribe(publisherRedisChannel);
   });
 
-
-
   io.on("harvest", (socket) => {
-    //Bi-directional pub-sub so publisher and subscriber are listening to each other's messages
-    pubClient.subscribe(constants.subscriberMessage);
-    subClient.subscribe(constants.publisherMessage);
+    
   });
 }

@@ -14,7 +14,7 @@ const { createAdapter, setupPrimary } = require("@socket.io/cluster-adapter");
 
 //Gateway configuration
 const numClusterWorkers = process.env.NUM_GATEWAY_CLUSTER_WORKERS || Math.max(require("os").cpus().length/2, 2); //Minimum of two workers by default
-const GATEWAY_PORT = process.env.GATEWAY_PORT || 3000;
+const GATEWAY_PORT = 3000;
 
 //Redis configuration
 const REDIS_HOST = "redis";
@@ -24,8 +24,6 @@ const REDIS_PORT = process.env.REDIS_PORT || 6379;
 const redisURL = { url: `redis://${REDIS_HOST}:${REDIS_PORT}` };
 
 const { createClient } = require("redis");
-const { Console } = require("console");
-const redisClient = createClient(redisURL);
 
 if (cluster.isMaster) {
   console.log(`Master pid: ${process.pid} is running`);
@@ -50,9 +48,9 @@ if (cluster.isMaster) {
   });
 
   httpServer.listen(GATEWAY_PORT);
-  console.log("Gateway listening at port:", GATEWAY_PORT);
+  console.log("Gateway listening at container port:", GATEWAY_PORT);
 
-  for (let i = 0; i < numClusterWorkers ; i++) {
+  for (var workerCount = 0; workerCount < numClusterWorkers ; workerCount++) {
     cluster.fork();
   }
 

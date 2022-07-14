@@ -24,6 +24,7 @@ const REDIS_PORT = process.env.REDIS_PORT || 6379;
 const redisURL = { url: `redis://${REDIS_HOST}:${REDIS_PORT}` };
 
 const { createClient } = require("redis");
+const { Console } = require("console");
 const redisClient = createClient(redisURL);
 
 if (cluster.isMaster) {
@@ -49,6 +50,7 @@ if (cluster.isMaster) {
   });
 
   httpServer.listen(GATEWAY_PORT);
+  console.log("Gateway listening at port:", GATEWAY_PORT);
 
   for (let i = 0; i < numClusterWorkers ; i++) {
     cluster.fork();

@@ -1,8 +1,9 @@
 //Node core
 const cluster = require("cluster");
-const http = require("http");
 
 //External
+const express = require("express");
+const gatewayHTTPServer = require("http").createServer(express);
 const { Server } = require("socket.io");
 const io = new Server();
 const { setupMaster, setupWorker } = require("@socket.io/sticky");
@@ -11,26 +12,26 @@ const { createAdapter, setupPrimary } = require("@socket.io/cluster-adapter");
 //const { createAdapter } = require("@socket.io/redis-adapter"); //In case we decide to use redis for session stickiness as well as pub-sub
 //const kafka = require("socket.io-kafka"'); //In case we decide to use Kafka as our pub-sub system later...
 
-
 //Gateway configuration
 const numClusterWorkers = process.env.NUM_GATEWAY_CLUSTER_WORKERS || Math.max(require("os").cpus().length/2, 2); //Minimum of two workers by default
 const GATEWAY_PORT = 3000;
 
 //Redis configuration
+const { createClient } = require("redis");
 const REDIS_HOST = "redis";
 const publisherRedisChannel = "publisherRedisChannel";
 const subscriberRedisChannel = "subscriberRedisChannel";
 const REDIS_PORT = process.env.REDIS_PORT || 6379;
 const redisURL = { url: `redis://${REDIS_HOST}:${REDIS_PORT}` };
 
-const { createClient } = require("redis");
+//Pull in routes
+//var testRoutes = require("./routes.js");
 
 if (cluster.isMaster) {
   console.log(`Master pid: ${process.pid} is running`);
-  const httpServer = http.createServer();
 
   // setup sticky sessions
-  setupMaster(httpServer, {
+  setupMaster(gatewayHTTPServer, {
     loadBalancingMethod: "least-connection",
   });
 
@@ -47,22 +48,22 @@ if (cluster.isMaster) {
    serialization: "advanced",
   });
 
-  httpServer.listen(GATEWAY_PORT);
-  console.log("Gateway listening at container port:", GATEWAY_PORT);
+  gatewayHTTPServer.listen(GATEWAY_PORT, () => {
+    console.log(`Gateway listening on container port ${GATEWAY_PORT}`);
+  });
 
   for (var workerCount = 0; workerCount < numClusterWorkers ; workerCount++) {
     cluster.fork();
   }
 
   cluster.on("exit", (worker) => {
-    console.log(`Worker pid: ${worker.process.pid} died`);
+    console.log(`Worker pid: ${worker.process.pid} died, recreating...`);
     cluster.fork();
   });
 } else {
   console.log(`Worker pid: ${process.pid} started`);
 
-  const httpServer = http.createServer();
-  const io = new Server(httpServer);
+  const io = new Server(gatewayHTTPServer);
 
   // use the cluster adapter
   io.adapter(createAdapter());

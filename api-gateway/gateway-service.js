@@ -1,8 +1,12 @@
 //Node core
 const cluster = require("cluster");
+const compression = require('compression');
 
 //External
 const express = require("express");
+const app = express();
+module.exports = app;
+const magic = require('express-routemagic');
 const gatewayHTTPServer = require("http").createServer(express);
 const { Server } = require("socket.io");
 const io = new Server();
@@ -19,13 +23,23 @@ const GATEWAY_PORT = 3000;
 //Redis configuration
 const { createClient } = require("redis");
 const REDIS_HOST = "redis";
-const publisherRedisChannel = "publisherRedisChannel";
-const subscriberRedisChannel = "subscriberRedisChannel";
+const redisPublisherChannel = "redisPublisherChannel";
+const redisSubscriberChannel = "redisSubscriberChannel";
 const REDIS_PORT = process.env.REDIS_PORT || 6379;
 const redisURL = { url: `redis://${REDIS_HOST}:${REDIS_PORT}` };
 
 //Pull in routes
-//var testRoutes = require("./routes.js");
+
+//All available parameters
+/*magic.use(app, {
+  routesFolder: './some-folder',
+  debug: debug,
+  logMapping: true,
+  ignoreSuffix: '_bak' // Will ignore files like 'index_bak.js' or folders like 'api_v1_bak'.
+})*/
+
+//Using defaults
+magic.use(app);
 
 if (cluster.isMaster) {
   console.log(`Master pid: ${process.pid} is running`);
@@ -73,12 +87,12 @@ if (cluster.isMaster) {
 
   io.on("connection", (socket) => {
     //Create new pub/sub Redis clients per connection
-    const pubClient = createClient(redisURL);
-    const subClient = pubClient.duplicate();
+    const redisPubClient = createClient(redisURL);
+    const redisSubClient = redisPubClient.duplicate();
 
     //Bi-directional pub-sub so publisher and subscriber are listening to each other's messages
-    pubClient.subscribe(subscriberRedisChannel);
-    subClient.subscribe(publisherRedisChannel);
+    redisPubClient.subscribe(redisSubscriberChannel);
+    redisSubClient.subscribe(redisPublisherChannel);
   });
 
   io.on("harvest", (socket) => {

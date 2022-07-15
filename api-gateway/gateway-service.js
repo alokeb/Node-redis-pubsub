@@ -1,101 +1,60 @@
-//Node core
-const cluster = require("cluster");
-const compression = require('compression');
-
-//External
-const express = require("express");
-const app = express();
-module.exports = app;
-const magic = require('express-routemagic');
-const gatewayHTTPServer = require("http").createServer(express);
-const { Server } = require("socket.io");
-const io = new Server();
-const { setupMaster, setupWorker } = require("@socket.io/sticky");
-const { createAdapter, setupPrimary } = require("@socket.io/cluster-adapter");
-//TODO: See if we can use redis/kafka for the socket.io sticky cluster
-//const { createAdapter } = require("@socket.io/redis-adapter"); //In case we decide to use redis for session stickiness as well as pub-sub
-//const kafka = require("socket.io-kafka"'); //In case we decide to use Kafka as our pub-sub system later...
-
 //Gateway configuration
-const numClusterWorkers = process.env.NUM_GATEWAY_CLUSTER_WORKERS || Math.max(require("os").cpus().length/2, 2); //Minimum of two workers by default
+const numClusterWorkers = process.env.NUM_GATEWAY_CLUSTER_WORKERS || Math.max(require('os').cpus().length/2, 2); //Minimum of two workers by default
 const GATEWAY_PORT = 3000;
 
+//Node core
+
+const cluster = require('cluster');
+const compression = require('compression');
+
 //Redis configuration
-const { createClient } = require("redis");
-const REDIS_HOST = "redis";
-const redisPublisherChannel = "redisPublisherChannel";
-const redisSubscriberChannel = "redisSubscriberChannel";
+const REDIS_HOST = 'redis';
 const REDIS_PORT = process.env.REDIS_PORT || 6379;
-const redisURL = { url: `redis://${REDIS_HOST}:${REDIS_PORT}` };
+const REDIS_URL = { url: `redis://${REDIS_HOST}:${REDIS_PORT}` };
+const redisPublisherChannel = 'redisPublisherChannel';
+const redisSubscriberChannel = 'redisSubscriberChannel';
 
-//Pull in routes
-
-//All available parameters
-/*magic.use(app, {
-  routesFolder: './some-folder',
-  debug: debug,
-  logMapping: true,
-  ignoreSuffix: '_bak' // Will ignore files like 'index_bak.js' or folders like 'api_v1_bak'.
-})*/
-
-//Using defaults
-magic.use(app);
+//NPM external
+const express = require('express');
+const api_router = require('express-routemagic');
 
 if (cluster.isMaster) {
-  console.log(`Master pid: ${process.pid} is running`);
+  // we create a HTTP server, but we do not use listen
+  // that way, we have a socket.io server that doesn't accept connections
+  var server = require('http').createServer();
+  var socketIO = require('socket.io');
+  var io = socketIO().listen(server);
+  var redis = require('socket.io-redis');
 
-  // setup sticky sessions
-  setupMaster(gatewayHTTPServer, {
-    loadBalancingMethod: "least-connection",
-  });
+  io.adapter(redis(REDIS_URL));
 
-  // setup connections between the workers
-  setupPrimary();
+  setInterval(function() {
+    // all workers will receive this in Redis, and emit
+    io.emit('data', 'payload');
+  }, 1000);
 
-  // needed for packets containing buffers (you can ignore it if you only send plaintext objects)
-  // Node.js < 16.0.0
-  //cluster.setupMaster({
-  //  serialization: "advanced",
-  //});
-  // Node.js > 16.0.0
-  cluster.setupPrimary({
-   serialization: "advanced",
-  });
-
-  gatewayHTTPServer.listen(GATEWAY_PORT, () => {
-    console.log(`Gateway listening on container port ${GATEWAY_PORT}`);
-  });
-
-  for (var workerCount = 0; workerCount < numClusterWorkers ; workerCount++) {
+  for (var i = 0; i < numClusterWorkers.length; i++) {
     cluster.fork();
   }
 
-  cluster.on("exit", (worker) => {
-    console.log(`Worker pid: ${worker.process.pid} died, recreating...`);
-    cluster.fork();
-  });
-} else {
-  console.log(`Worker pid: ${process.pid} started`);
+  cluster.on('exit', function(worker, code, signal) {
+    console.log('worker ' + worker.process.pid + ' died');
+  }); 
+}
 
-  const io = new Server(gatewayHTTPServer);
+if (cluster.isWorker) {
+  var app = express();
+  //Pull in routes
+  api_router.use(app);
+  var http = require('http');
+  var server = http.createServer(app);
+  var io = require('socket.io').listen(server);
+  var redis = require('socket.io-redis');
 
-  // use the cluster adapter
-  io.adapter(createAdapter());
-
-  // setup connection with the primary process
-  setupWorker(io);
-
-  io.on("connection", (socket) => {
-    //Create new pub/sub Redis clients per connection
-    const redisPubClient = createClient(redisURL);
-    const redisSubClient = redisPubClient.duplicate();
-
-    //Bi-directional pub-sub so publisher and subscriber are listening to each other's messages
-    redisPubClient.subscribe(redisSubscriberChannel);
-    redisSubClient.subscribe(redisPublisherChannel);
+  io.adapter(redis({ host: 'localhost', port: 6379 }));
+  io.on('connection', function(socket) {
+    socket.emit('data', 'connected to worker: ' + cluster.worker.id);
   });
 
-  io.on("harvest", (socket) => {
-    
-  });
+  app.listen(GATEWAY_PORT);
 }

@@ -9,7 +9,6 @@ services:
         published: 6379
         protocol: tcp
         mode: host
-
   api-gateway:
     container_name: api-gateway
     build: 
@@ -21,3 +20,11 @@ services:
         mode: host
     depends_on:
         - redis
+  nginx:
+    build: 
+      dockerfile: ./Nginx.Dockerfile
+    ports:
+      - target: 80
+        published: 3000
+    depends_on:
+        - api-gateway

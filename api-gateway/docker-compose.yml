@@ -20,11 +20,14 @@ services:
         mode: host
     depends_on:
         - redis
-  nginx:
-    build: 
-      dockerfile: ./Nginx.Dockerfile
-    ports:
-      - target: 80
-        published: 3000
-    depends_on:
-        - api-gateway
+
+  # If we decide to use nginx reverse proxy instead of Node JS socket.io cluster
+  #nginx:
+  #  container_name: nginx
+  #  build: 
+  #    dockerfile: ./Nginx.Dockerfile
+  #  ports:
+  #    - target: 80
+  #      published: 3000
+  #  depends_on:
+  #      - api-gateway

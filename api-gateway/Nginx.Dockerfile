@@ -1,5 +1,4 @@
-FROM nginx:stable-alpine
+FROM nginx:alpine
 COPY nginx.conf /etc/nginx/nginx.conf
-USER nginx
 
 #CMD ["nginx", "-g", "daemon off;"]

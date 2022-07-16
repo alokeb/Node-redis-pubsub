@@ -6,9 +6,11 @@
     "compression": "^1.7.4",
     "express": "^4.18.1",
     "express-routemagic": "^2.0.8",
-    "socket.io": "^4.5.1"
+    "socket.io": "^4.5.1",
+    "socket.io-redis": "^6.1.1",
+    "@socket.io/sticky": "^1.0.1"
   },
   "scripts": {
-    "start": "node gateway-service.js"
+    "start": "node gateway-service-NodeJSCLuster.js"
   }
 }

@@ -1,0 +1,11 @@
+{
+  "name": "server",
+  "description": "",
+  "license": "ISC",
+  "dependencies": {
+    "redis": "^4.2.0"
+  },
+  "scripts": {
+    "start": "node server.js"
+  }
+}

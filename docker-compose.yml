@@ -1,0 +1,41 @@
+version: '3.9'
+services:
+  harvest-service:
+    extends:
+      file: examples/Harvest-server/docker-compose.yml   
+      service: harvest-service
+
+  redis:
+    extends:
+      file: Redis/docker-compose.yml
+      service: redis
+
+  api-gateway:
+    extends:
+      file: api-gateway/docker-compose.yml
+      service: api-gateway
+    depends_on:
+      - redis
+      
+  consumer:
+    extends:
+      file: examples/Consumer/docker-compose.yml
+      service: server
+    depends_on:
+      - redis
+  
+  http-producer:
+    extends:
+      file: examples/HTTPProducer/docker-compose.yml
+      service: http-client
+    depends_on:
+      - api-gateway
+      - harvest-service
+
+  socketio-producer:
+    extends:
+      file: examples/SocketIOProducer/docker-compose.yml
+      service: socketio-client
+    depends_on:
+      - api-gateway
+      - harvest-service

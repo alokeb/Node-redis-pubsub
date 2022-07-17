@@ -1,11 +1,21 @@
+//Constants
+const REDIS_HOST = process.env.REDIS_HOST || "redis";
+const REDIS_PORT = process.env.REDIS_PORT || 6379;
+const REDIS_URL = process.env.REDIS_URL || { host: REDIS_HOST, port: REDIS_PORT };
+const redis = require('redis');
+const publisherRedisChannel = "publisherRedisChannel";
+const subscriberRedisChannel = "subscriberRedisChannel";
+
+//Routes
+var api = require('./routes/api');
+
 //Node core
 const cluster = require("cluster");
 const http = require("http");
 
 //External
 const { Server } = require("socket.io");
-const redisAdapter = require("socket.io-redis");
-const io = new Server();
+
 const { setupMaster, setupWorker } = require("@socket.io/sticky");
 
 //Gateway configuration
@@ -13,11 +23,20 @@ const numClusterWorkers = process.env.NUM_GATEWAY_CLUSTER_WORKERS || Math.max(re
 const GATEWAY_PORT = 3000;
 
 //Redis configuration
-const REDIS_HOST = "redis";
-const publisherRedisChannel = "publisherRedisChannel";
-const subscriberRedisChannel = "subscriberRedisChannel";
-const REDIS_PORT = process.env.REDIS_PORT || 6379;
+
 const { createClient } = require("redis");
+const redisAdapter = require("socket.io-redis");
+
+// Security considerations
+// let options = {};
+// if (process.env.NODE_ENV === 'production') {
+//   var key = fs.readFileSync(__dirname + '/../certs/selfsigned.key');
+//   var cert = fs.readFileSync(__dirname + '/../certs/selfsigned.crt');
+//   options = {
+//     key: key,
+//     cert: cert,
+//   };
+// }
 
 if (cluster.isMaster) {
   console.log(`Master ${process.pid} is running`);
@@ -41,15 +60,27 @@ if (cluster.isMaster) {
     const app = require("express")();
     const httpServer = http.createServer(app);
   
-    const io = new Server(httpServer);
+    var io = new Server(httpServer);
+    // const publisher = redis.createClient();
+    // const subscriber = publisher.duplicate();
+    
     io.adapter(redisAdapter({ host: REDIS_HOST, port: REDIS_PORT }));
     setupWorker(io);
 
-    io.on("connection", (socket) => {
-      console.log("connect", socket.id);
+    //TODO: Figure out why routes in external file isn't working...
+    // Make io accessible to our router
+    //require('./routes/api')(io);
+
+    //Creating HTTP route in here for now - not good but Ok for POC
+    app.get('/harvest_line', function(req, res) {
+      let redisClient = redis.createClient(REDIS_URL);
+      redisClient.publish(publisherRedisChannel, req);
+      res.send('Ok');
     });
 
-    app.get("/test", (req, res) => {
-      res.send("OK");
-    });
-}
+    // Error Handling...
+
+    io.on("connection", (socket) => {
+      //Do something...
+    });   
+ }

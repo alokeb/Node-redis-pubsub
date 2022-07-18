@@ -3,8 +3,8 @@ const REDIS_HOST = process.env.REDIS_HOST || "redis";
 const REDIS_PORT = process.env.REDIS_PORT || 6379;
 const REDIS_URL = process.env.REDIS_URL || { host: REDIS_HOST, port: REDIS_PORT };
 const redis = require('redis');
-const publisherRedisChannel = "publisherRedisChannel";
-const subscriberRedisChannel = "subscriberRedisChannel";
+const downstreamRedisChannel = "downstreamRedisChannel";
+const upstreamRedisChannel = "upstreamRedisChannel";
 
 //Routes
 var api = require('./routes/api');
@@ -60,11 +60,11 @@ if (cluster.isMaster) {
     const app = require("express")();
     const httpServer = http.createServer(app);
   
-    var io = new Server(httpServer);
-    // const publisher = redis.createClient();
-    // const subscriber = publisher.duplicate();
+    var io = new Server(httpServer),
+        downstreamRedisClient = redis.createClient(REDIS_URL),
+        upstreamRedisClient = downstreamRedisClient.duplicate();
     
-    io.adapter(redisAdapter({ host: REDIS_HOST, port: REDIS_PORT }));
+    io.adapter(redisAdapter(REDIS_URL));
     setupWorker(io);
 
     //TODO: Figure out why routes in external file isn't working...
@@ -76,19 +76,17 @@ if (cluster.isMaster) {
       res.send('Ok');
     });
 
-    // Error Handling...
+    //TODO: HTTP Error Handling...
 
     io.on("connection", (socket) => {
-      var redisClient = redis.createClient(REDIS_URL);
-
       socket.on('message', function (msg) { 
         if (msg.action === "subscribe") {
           console.log("Subscribe on " + msg.channel);
-          redisClient.subscribe(msg.channel);    
+          downstreamRedisClient.subscribe(msg.channel);    
         }
         if (msg.action === "unsubscribe") {
           console.log("Unsubscribe from" + msg.channel);      
-          redisClient.unsubscribe(msg.channel); 
+          downstreamRedisClient.unsubscribe(msg.channel); 
         }
       });
 
@@ -96,7 +94,7 @@ if (cluster.isMaster) {
         redisClient.quit();
       });
 
-      sub.on("message", function (channel, message) {
+      downstreamRedisClient.on("message", function (channel, message) {
         console.log(channel +": " + message);
         socket.send({
           channel: channel,

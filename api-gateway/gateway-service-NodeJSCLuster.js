@@ -73,14 +73,35 @@ if (cluster.isMaster) {
 
     //Creating HTTP route in here for now - not good but Ok for POC
     app.get('/harvest_line', function(req, res) {
-      let redisClient = redis.createClient(REDIS_URL);
-      redisClient.publish(publisherRedisChannel, req);
       res.send('Ok');
     });
 
     // Error Handling...
 
     io.on("connection", (socket) => {
-      //Do something...
+      var redisClient = redis.createClient(REDIS_URL);
+
+      socket.on('message', function (msg) { 
+        if (msg.action === "subscribe") {
+          console.log("Subscribe on " + msg.channel);
+          redisClient.subscribe(msg.channel);    
+        }
+        if (msg.action === "unsubscribe") {
+          console.log("Unsubscribe from" + msg.channel);      
+          redisClient.unsubscribe(msg.channel); 
+        }
+      });
+
+      socket.on('disconnect', function () { 
+        redisClient.quit();
+      });
+
+      sub.on("message", function (channel, message) {
+        console.log(channel +": " + message);
+        socket.send({
+          channel: channel,
+          data: message
+        });
+      }); 
     });   
  }

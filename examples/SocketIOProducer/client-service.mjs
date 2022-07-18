@@ -1,5 +1,11 @@
-import {http} from "http"
-
-const PORT = process.env.PORT || 3000;
-
-//TODO: Implement
+var client = new Pubsub({
+    port: 8000
+  });
+  
+  client.connect();
+  
+  client.on("connect", function() {
+    client.subscribe("trololo", function(data){
+        console.log('Received a message from the server: ' + data);
+    });	  
+});  

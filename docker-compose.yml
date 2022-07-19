@@ -6,9 +6,12 @@ services:
       service: harvest-service
 
   redis:
-    extends:
-      file: Redis/docker-compose.yml
-      service: redis
+    image: redis
+    ports:
+      - target: 6379
+        published: 6379
+        protocol: tcp
+        mode: host
 
   api-gateway:
     extends:

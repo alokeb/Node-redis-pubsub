@@ -57,15 +57,25 @@ if (cluster.isMaster) {
   });
 } else {
     console.log(`Worker ${process.pid} started`);
-    const app = require("express")();
+    const app = require('express')();
     const httpServer = http.createServer(app);
   
-    var io = new Server(httpServer),
-        downstreamRedisClient = redis.createClient(REDIS_URL),
-        upstreamRedisClient = downstreamRedisClient.duplicate();
+    var io = new Server(httpServer);
+        
     
+      
     io.adapter(redisAdapter(REDIS_URL));
     setupWorker(io);
+
+    var downstreamRedisClient = redis.createClient(REDIS_URL),
+        upstreamRedisClient = redis.createClient(REDIS_URL);
+
+    downstreamRedisClient.connect();
+    upstreamRedisClient.connnect();
+
+    //Set upstream and downstream to subscribe to each other
+    downstreamRedisClient.subscribe(upstreamRedisChannel);
+    upstreamRedisClient.subscribe(downstreamRedisChannel);
 
     //TODO: Figure out why routes in external file isn't working...
     // Make io accessible to our router
@@ -73,8 +83,9 @@ if (cluster.isMaster) {
 
     //Creating HTTP route in here for now - not good but Ok for POC
     app.get('/harvest_line', function(req, res) {
-      res.send('Ok');
-    });
+      downstreamRedisClient.publish(downstreamRedisChannel, msg);
+      console.log('published harvest line:', msg);
+    }).end();
 
     //TODO: HTTP Error Handling...
 
@@ -88,7 +99,18 @@ if (cluster.isMaster) {
           console.log("Unsubscribe from" + msg.channel);      
           downstreamRedisClient.unsubscribe(msg.channel); 
         }
+
       });
+
+      socket.on('harvest_line') , function (msg) {
+        downstreamRedisClient.publish(downstreamRedisChannel, msg);
+        console.log('published harvest line:', msg);
+      };
+
+      socket.on('processed_harvest'), function (msg) {
+        upstreamRedisClient.publish(upstreamRedisChannel, msg);
+        console.log('processed harvest line:', msg);
+      };
 
       socket.on('disconnect', function () { 
         redisClient.quit();

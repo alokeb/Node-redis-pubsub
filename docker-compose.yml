@@ -5,59 +5,61 @@ services:
       file: examples/Harvest-server/docker-compose.yml   
       service: harvest-service
     networks:
-      - api-gateway-network
+      - internal-network
 
   redis:
     image: redis
     networks:
-      - api-gateway-network
+      - internal-network
     ports:
       - target: 6379
         published: 6379
         protocol: tcp
-        mode: host
 
   api-gateway:
-   
     extends:
       file: api-gateway/docker-compose.yml
       service: api-gateway
     networks:
-      - api-gateway-network
+      - internal-network
     depends_on:
       - redis
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
       
   consumer:
     extends:
       file: examples/Consumer/docker-compose.yml
       service: server
     networks:
-      - api-gateway-network
+      - internal-network
     depends_on:
       - redis
   
   http-producer:
-    
     extends:
       file: examples/HTTPProducer/docker-compose.yml
       service: http-client
     networks:
-      - api-gateway-network
+      - external-network
     depends_on:
       - api-gateway
       - harvest-service
 
   socketio-producer:
-    
     extends:
       file: examples/SocketIOProducer/docker-compose.yml
       service: socketio-client
     networks:
-      - api-gateway-network
+      - external-network
     depends_on:
       - api-gateway
       - harvest-service
 
 networks:
-  api-gateway-network:
+  internal-network:
     driver: bridge
+    internal: true
+  external-network:
+    internal: false

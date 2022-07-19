@@ -4,9 +4,13 @@ services:
     extends:
       file: examples/Harvest-server/docker-compose.yml   
       service: harvest-service
+    networks:
+      - api-gateway-network
 
   redis:
     image: redis
+    networks:
+      - api-gateway-network
     ports:
       - target: 6379
         published: 6379
@@ -14,9 +18,12 @@ services:
         mode: host
 
   api-gateway:
+   
     extends:
       file: api-gateway/docker-compose.yml
       service: api-gateway
+    networks:
+      - api-gateway-network
     depends_on:
       - redis
       
@@ -24,21 +31,33 @@ services:
     extends:
       file: examples/Consumer/docker-compose.yml
       service: server
+    networks:
+      - api-gateway-network
     depends_on:
       - redis
   
   http-producer:
+    
     extends:
       file: examples/HTTPProducer/docker-compose.yml
       service: http-client
+    networks:
+      - api-gateway-network
     depends_on:
       - api-gateway
       - harvest-service
 
   socketio-producer:
+    
     extends:
       file: examples/SocketIOProducer/docker-compose.yml
       service: socketio-client
+    networks:
+      - api-gateway-network
     depends_on:
       - api-gateway
       - harvest-service
+
+networks:
+  api-gateway-network:
+    driver: bridge

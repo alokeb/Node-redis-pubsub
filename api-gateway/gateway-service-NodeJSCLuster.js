@@ -1,9 +1,6 @@
-//Constants
-const REDIS_URL = process.env.REDIS_URL||{url: `redis://${process.env.REDIS_HOST}:${process.env.REDIS_PORT}`};
 
-const redis = require('redis');
-const downstreamRedisChannel = "downstreamRedisChannel";
-const upstreamRedisChannel = "upstreamRedisChannel";
+const downstreamMessage = process.env.DOWNSTREAM_MESSAGE||'harvest_line';
+const upstreamMessage = process.env.UPSTREAM_MESSAGE||'processed_havest';
 
 //Routes
 var api = require('./routes/api');
@@ -13,17 +10,20 @@ const cluster = require("cluster");
 const http = require("http");
 
 //External
+const compression = require('compression');
 const { Server } = require("socket.io");
-const { setupMaster, setupWorker } = require("@socket.io/sticky");
+const { setupMaster, setupWorker } = require("@socket.io/sticky"); //https://socket.io/docs/v4/using-multiple-nodes
 
 //Gateway configuration
 const numClusterWorkers = process.env.NUM_GATEWAY_CLUSTER_WORKERS || Math.max(require("os").cpus().length, 2); //Minimum of two workers by default
 const GATEWAY_PORT = 3000;
 
 //Redis configuration
-const { createClient } = require("redis");
-const {createAdapter} = require("@socket.io/redis-adapter");
-const compression = require('compression');
+const REDIS_HOST = process.env.REDIS_HOST || "redis";
+const REDIS_PORT = process.env.REDIS_PORT || 6379;
+const REDIS_URL = process.env.REDIS_URL||{url: `redis://${REDIS_HOST}:${REDIS_PORT}`};
+const redis = require('redis');
+const {createAdapter} = require("@socket.io/redis-adapter"); //https://github.com/socketio/socket.io-redis-adapter#migrating-from-socketio-redis
 
 // Security considerations
 // let options = {};
@@ -64,11 +64,11 @@ if (cluster.isMaster) {
           upstreamRedisClient = downstreamRedisClient.duplicate();
 
     upstreamRedisClient.on('error', (err) =>{
-      console.log(`Error occured while connecting upstream to redis server. Is it available at ${REDIS_URL}?`);
+      console.log(`Error occured while connecting upstream to redis server. Is it available at ${REDIS_URL}?`, err);
       process.exit(-1);
     });
     downstreamRedisClient.on('error', (err) =>{
-      console.log(`Error occured while connecting downstream to redis server. Is it available at ${REDIS_URL}?`);
+      console.log(`Error occured while connecting downstream to redis server. Is it available at ${REDIS_URL}?`, err);
       process.exit(-1);
     });
 
@@ -90,6 +90,8 @@ if (cluster.isMaster) {
         io.adapter(createAdapter(downstreamRedisClient, upstreamRedisClient));
         console.log('Worker pid:', process.pid, 'Connected via Redis pub sub');    
       });
+      const redisEmitter = new Emitter(downstreamRedisClient);
+
 
       socket.on('message', function (msg) { 
         if (msg.action === "subscribe") {
@@ -100,23 +102,16 @@ if (cluster.isMaster) {
           console.log("Unsubscribe from" + msg.channel);      
           downstreamRedisClient.unsubscribe(msg.channel); 
         }
-
       });
-
-      socket.on('harvest_line') , function (msg) {
-        downstreamRedisClient.publish(downstreamRedisChannel, msg);
-        console.log('published harvest line:', msg);
-      };
-
-      socket.on('processed_harvest'), function (msg) {
-        upstreamRedisClient.publish(upstreamRedisChannel, msg);
-        socket.emit(msg);
-      };
 
       socket.on('disconnect', function () { 
         //Cleanup
         downstreamRedisClient.quit();
         upstreamRedisClient.quit();
       });
+
+      socket.on(DOWNSTREAM_MESSAGE), function (msg) {
+        redisEmitter.emit(DOWNSTREAM_MESSAGE, msg);
+      };
     });
 }

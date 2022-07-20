@@ -5,9 +5,6 @@ const redis = require('redis');
 const downstreamRedisChannel = "downstreamRedisChannel";
 const upstreamRedisChannel = "upstreamRedisChannel";
 
-//Custom room for our harvest messages...
-const ROOM_NAME = process.env.REDIS_HOST || "harvest";
-
 //Routes
 var api = require('./routes/api');
 
@@ -26,6 +23,7 @@ const GATEWAY_PORT = 3000;
 //Redis configuration
 const { createClient } = require("redis");
 const {createAdapter} = require("@socket.io/redis-adapter");
+const compression = require('compression');
 
 // Security considerations
 // let options = {};
@@ -52,11 +50,12 @@ if (cluster.isMaster) {
   }
 
   cluster.on("exit", (worker) => {
-    console.log(`Worker ${worker.process.pid} died`);
+    console.log(`Worker ${worker.process.pid} died, respawning...`);
     cluster.fork();
   });
 } else {
     const app = require('express')();
+    app.use(compression);
     const httpServer = http.createServer(app);
   
     var io = new Server(httpServer);
@@ -73,58 +72,51 @@ if (cluster.isMaster) {
       process.exit(-1);
     });
 
-    Promise.all([downstreamRedisClient.connect(), upstreamRedisClient.connect()]).then(() => {
-      io.adapter(createAdapter(downstreamRedisClient, upstreamRedisClient));
-      console.log(`Worker ${process.pid} connected via RedisPubSub`);
-    });
     setupWorker(io);
-   
+    console.log(`Worker ${process.pid} ready`);
+
     //TODO: Figure out why routes in external file isn't working...
     // Make io accessible to our router
     //require('./routes/api')(io);
 
     //Creating HTTP route in here for now - not good but Ok for POC
     app.get('/harvest_line', function(req, res) {
-      //console.log('published harvest line:', msg);
+      //console.log('Received HTTP request:', msg);
     });
-
     //TODO: HTTP Error Handling...
 
-   
+    io.on("connection", (socket) => {
+      Promise.all([downstreamRedisClient.connect(), upstreamRedisClient.connect()]).then(() => {
+        io.adapter(createAdapter(downstreamRedisClient, upstreamRedisClient));
+        console.log('Worker pid:', process.pid, 'Connected via Redis pub sub');    
+      });
 
-    // io.on("connection", (socket) => {
-    //   socket.on('message', function (msg) { 
-    //     if (msg.action === "subscribe") {
-    //       console.log("Subscribe on " + msg.channel);
-    //       downstreamRedisClient.subscribe(msg.channel);    
-    //     }
-    //     if (msg.action === "unsubscribe") {
-    //       console.log("Unsubscribe from" + msg.channel);      
-    //       downstreamRedisClient.unsubscribe(msg.channel); 
-    //     }
+      socket.on('message', function (msg) { 
+        if (msg.action === "subscribe") {
+          console.log("Subscribe on " + msg.channel);
+          downstreamRedisClient.subscribe(msg.channel);    
+        }
+        if (msg.action === "unsubscribe") {
+          console.log("Unsubscribe from" + msg.channel);      
+          downstreamRedisClient.unsubscribe(msg.channel); 
+        }
 
-    //   });
+      });
 
-    //   socket.on('harvest_line') , function (msg) {
-    //     downstreamRedisClient.publish(downstreamRedisChannel, msg);
-    //     console.log('published harvest line:', msg);
-    //   };
+      socket.on('harvest_line') , function (msg) {
+        downstreamRedisClient.publish(downstreamRedisChannel, msg);
+        console.log('published harvest line:', msg);
+      };
 
-    //   socket.on('processed_harvest'), function (msg) {
-    //     upstreamRedisClient.publish(upstreamRedisChannel, msg);
-    //     console.log('processed harvest line:', msg);
-    //   };
+      socket.on('processed_harvest'), function (msg) {
+        upstreamRedisClient.publish(upstreamRedisChannel, msg);
+        socket.emit(msg);
+      };
 
-    //   socket.on('disconnect', function () { 
-    //     redisClient.quit();
-    //   });
-
-    //   downstreamRedisClient.on("message", function (channel, message) {
-    //     console.log(channel +": " + message);
-    //     socket.send({
-    //       channel: channel,
-    //       data: message
-    //     });
-    //   }); 
-    // });   
- }
+      socket.on('disconnect', function () { 
+        //Cleanup
+        downstreamRedisClient.quit();
+        upstreamRedisClient.quit();
+      });
+    });
+}

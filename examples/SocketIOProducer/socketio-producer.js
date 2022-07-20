@@ -10,7 +10,7 @@ const socket = io(`ws://${GATEWAY_HOST}:${GATEWAY_PORT}`);
 socket.connect();
 
 function getHarvestLine() {
-  let request = http.get('http://harvest-service/', (res) => {
+  let request = http.get('http://harvest-service:30001/', (res) => {
     if (res.statusCode !== 200) {
       console.error(`Did not get an OK from the harvest server. Code: ${res.statusCode}`);
       res.resume();

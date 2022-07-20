@@ -1,5 +1,14 @@
 version: '3.9'
+
+networks:
+  internal-network:
+    driver: bridge
+    internal: true
+  external-network:
+    internal: false
+
 services:
+  #On external network
   harvest-service:
     extends:
       file: examples/Harvest-server/docker-compose.yml   
@@ -8,47 +17,8 @@ services:
       - external-network
     ports:
       - target: 3000
-        published: 80
+        published: 30001
         protocol: tcp
-
-  redis:
-    image: redis
-    networks:
-      - internal-network
-    ports:
-      - target: 6379
-        published: 6379
-        protocol: tcp
-
-  api-gateway:
-    extends:
-      file: api-gateway/docker-compose.yml
-      service: api-gateway
-    networks:
-      - internal-network
-      - external-network
-    depends_on:
-      - redis
-    environment:
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-    ports:
-      - target: 3000
-        published: 30000
-        protocol: tcp
-      
-  consumer:
-    extends:
-      file: examples/Consumer/docker-compose.yml
-      service: server
-    networks:
-      - internal-network
-    depends_on:
-      - redis
-    environment:
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-  
   http-producer:
     extends:
       file: examples/HTTPProducer/docker-compose.yml
@@ -68,12 +38,43 @@ services:
     depends_on:
       - harvest-service
       - api-gateway
-      
 
-networks:
-  internal-network:
-    driver: bridge
-    internal: true
-  external-network:
-    driver: bridge
-    internal: false
+  #Middleware
+  api-gateway:
+    extends:
+      file: api-gateway/docker-compose.yml
+      service: api-gateway
+    networks:
+      - internal-network
+      - external-network
+    depends_on:
+      - redis
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    ports:
+      - target: 3000
+        published: 30000
+        protocol: tcp
+
+  #On internal network
+  redis:
+    image: redis
+    networks:
+      - internal-network
+    ports:
+      - target: 6379
+        published: 6379
+        protocol: tcp
+  
+  consumer:
+    extends:
+      file: examples/Consumer/docker-compose.yml
+      service: server
+    networks:
+      - internal-network
+    depends_on:
+      - redis
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379

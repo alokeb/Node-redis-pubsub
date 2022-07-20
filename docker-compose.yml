@@ -6,6 +6,10 @@ services:
       service: harvest-service
     networks:
       - external-network
+    ports:
+      - target: 3000
+        published: 80
+        protocol: tcp
 
   redis:
     image: redis
@@ -28,6 +32,10 @@ services:
     environment:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+    ports:
+      - target: 3000
+        published: 30000
+        protocol: tcp
       
   consumer:
     extends:
@@ -48,9 +56,9 @@ services:
     networks:
       - external-network
     depends_on:
-      - api-gateway
       - harvest-service
-
+      - api-gateway
+      
   socketio-producer:
     extends:
       file: examples/SocketIOProducer/docker-compose.yml
@@ -58,8 +66,9 @@ services:
     networks:
       - external-network
     depends_on:
-      - api-gateway
       - harvest-service
+      - api-gateway
+      
 
 networks:
   internal-network:

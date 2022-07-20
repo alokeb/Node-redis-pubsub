@@ -4,7 +4,7 @@ const fruits = process.env.FRUIT ||  ["Strawberry", "Apple", "Banana"];
 const months = process.env.MONTH || ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const fruitssize = fruits.length;
 const monthssize = months.length;
-const port = process.env.PORT || 3000;
+const port = 3000;
 
 var server = http.createServer(function (req, res) {   //create web server
     if (req.url == '/') { //check the URL of the current request
@@ -19,9 +19,8 @@ var server = http.createServer(function (req, res) {   //create web server
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.write(JSON.stringify(response));
         res.end();
-
     }
 });
 
 server.listen(port);
-console.log("Harvest server started at port:", port);
+console.log("Harvest server started at container port:", port);

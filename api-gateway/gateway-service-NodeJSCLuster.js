@@ -1,6 +1,6 @@
 
-const downstreamMessage = process.env.DOWNSTREAM_MESSAGE||'harvest_line';
-const upstreamMessage = process.env.UPSTREAM_MESSAGE||'processed_havest';
+const DOWNSTREAM_MESSAGE = process.env.DOWNSTREAM_MESSAGE||'harvest_line';
+const UPSTREAM_MESSAGE = process.env.UPSTREAM_MESSAGE||'processed_havest';
 
 //Routes
 var api = require('./routes/api');
@@ -80,8 +80,9 @@ if (cluster.isMaster) {
     //require('./routes/api')(io);
 
     //Creating HTTP route in here for now - not good but Ok for POC
-    app.get('/harvest_line', function(req, res) {
-      //console.log('Received HTTP request:', msg);
+    app.post(DOWNSTREAM_MESSAGE, function(req, res) {
+      //Relay to Redis
+      //??redisEmitter.emit(DOWNSTREAM_MESSAGE, req.);
     });
     //TODO: HTTP Error Handling...
 
@@ -111,7 +112,7 @@ if (cluster.isMaster) {
       });
 
       socket.on(DOWNSTREAM_MESSAGE), function (msg) {
-        redisEmitter.emit(DOWNSTREAM_MESSAGE, msg);
+        
       };
     });
 }

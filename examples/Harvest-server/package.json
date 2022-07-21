@@ -1,8 +1,0 @@
-{
-  "name": "harvest-server",
-  "description": "A simple application that returns a random month and fruit from an enum",
-  "license": "ISC",
-  "scripts": {
-    "start": "node harvest-service.js"
-  }
-}

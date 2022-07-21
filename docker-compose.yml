@@ -9,34 +9,22 @@ networks:
 
 services:
   #On external network
-  harvest-service:
-    extends:
-      file: examples/Harvest-server/docker-compose.yml   
-      service: harvest-service
-    networks:
-      - external-network
-    ports:
-      - target: 3000
-        published: 30001
-        protocol: tcp
   http-producer:
     extends:
       file: examples/HTTPProducer/docker-compose.yml
-      service: http-client
+      service: http-producer
     networks:
       - external-network
     depends_on:
-      - harvest-service
       - api-gateway
       
   socketio-producer:
     extends:
       file: examples/SocketIOProducer/docker-compose.yml
-      service: socketio-client
+      service: socketio-producer
     networks:
       - external-network
     depends_on:
-      - harvest-service
       - api-gateway
 
   #Middleware
@@ -70,7 +58,7 @@ services:
   consumer:
     extends:
       file: examples/Consumer/docker-compose.yml
-      service: server
+      service: consumer
     networks:
       - internal-network
     depends_on:

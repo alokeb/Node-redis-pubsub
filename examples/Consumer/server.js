@@ -12,19 +12,18 @@ var
     publisher = subscriber.duplicate();
 
 subscriber.on('error', (err) => console.log('Redis Client Error', err));
-await subscriber.connect();
+subscriber.connect();
 
-await subscriber.subscribe('harvest_line', (message) => {
+subscriber.subscribe('harvest_line', (message) => {
   console.log(message); // 'message'
 });
 
 subscriber.subscribe(downstreamRedisChannel);
 
 subscriber.on('harvest_line', function(channel, message){
-  //TODO: Process incoming harvest
-  const processed_harvest='foo';
+  //TODO: process incoming harvest
 
-  publisher.publish(upstreamRedisChannel, JSON.stringify(processed_harvest));
+  //publisher.publish(upstreamRedisChannel, message);
 });
 
 server.listen(3000);

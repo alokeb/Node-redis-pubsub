@@ -3,6 +3,6 @@
   "description": "",
   "license": "ISC",
   "scripts": {
-    "start": "node client-service.mjs"
+    "start": "node client-service.js"
   }
 }

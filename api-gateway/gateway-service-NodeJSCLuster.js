@@ -3,13 +3,12 @@ const DOWNSTREAM_MESSAGE = process.env.DOWNSTREAM_MESSAGE||'harvest_line';
 const UPSTREAM_MESSAGE = process.env.UPSTREAM_MESSAGE||'processed_havest';
 
 //Routes
-var api = require('./routes/api');
+//var api = require('./routes/api');
 
 //Node core
 const cluster = require("cluster");
 const http = require("http");
 
-//External
 const compression = require('compression');
 const { Server } = require("socket.io");
 const { setupMaster, setupWorker } = require("@socket.io/sticky"); //https://socket.io/docs/v4/using-multiple-nodes
@@ -26,8 +25,9 @@ const redis = require('redis');
 const {createAdapter} = require("@socket.io/redis-adapter"); //https://github.com/socketio/socket.io-redis-adapter#migrating-from-socketio-redis
 
 // Security considerations
+//External
 // let options = {};
-// if (process.env.NODE_ENV === 'production') {
+// if (process.env.NODE_ENV === 'production') {                               
 //   var key = fs.readFileSync(__dirname + '/../certs/selfsigned.key');
 //   var cert = fs.readFileSync(__dirname + '/../certs/selfsigned.crt');
 //   options = {
@@ -81,8 +81,8 @@ if (cluster.isMaster) {
 
     //Creating HTTP route in here for now - not good but Ok for POC
     app.post(DOWNSTREAM_MESSAGE, function(req, res) {
-      //Relay to Redis
-      //??redisEmitter.emit(DOWNSTREAM_MESSAGE, req.);
+      //TODO: Relay to Redis
+      //redisClient.publish(DOWNSTREAM_MESSAGE, req.);
     });
     //TODO: HTTP Error Handling...
 

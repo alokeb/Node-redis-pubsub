@@ -1,6 +1,6 @@
 const { http } = require('http');
 const axios = require('axios');
-const fruits = process.env.FRUIT ||  ["Strawberry", "Apple", "Banana"];
+const fruits = process.env.FRUIT ||  ["Strawberry", "Apple", "Banana", "Tomato"];
 const months = process.env.MONTH || ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const fruitssize = fruits.length;
 const monthssize = months.length;

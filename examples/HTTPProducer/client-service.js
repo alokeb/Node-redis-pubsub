@@ -3,7 +3,8 @@ const fruits = process.env.FRUIT ||  ["Strawberry", "Apple", "Banana"];
 const months = process.env.MONTH || ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const fruitssize = fruits.length;
 const monthssize = months.length;
-const PORT = process.env.PORT || 3000;
+const GATEWAY_HOST = process.env.GATEWAY_HOST||'api-gateway';
+const GATEWAY_PORT = process.env.GATEWAY_PORT||30000;
 
 function getHarvestLine() {
   //Mock simulate a record read entry

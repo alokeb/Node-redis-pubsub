@@ -1,7 +1,10 @@
 {
-  "name": "client",
+  "name": "HTTPProducer",
   "description": "",
   "license": "ISC",
+  "dependencies": {
+    "axios": "^0.27.2" 
+  },
   "scripts": {
     "start": "node client-service.js"
   }

@@ -1,5 +1,5 @@
 {
-  "name": "client",
+  "name": "SocketIOProducer",
   "description": "",
   "license": "ISC",
   "dependencies": {

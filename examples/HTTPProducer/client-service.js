@@ -6,6 +6,7 @@ const fruitssize = fruits.length;
 const monthssize = months.length;
 const GATEWAY_HOST = process.env.GATEWAY_HOST||'api-gateway';
 const GATEWAY_PORT = process.env.GATEWAY_PORT||30000;
+const GATEWAY_URL = `http://${GATEWAY_HOST}:${GATEWAY_PORT}`;
 const DOWNSTREAM_MESSAGE = process.env.DOWNSTREAM_MESSAGE||'harvest_line';
 
 function getHarvestLine() {
@@ -20,7 +21,7 @@ function getHarvestLine() {
 setInterval(() => {
   let msg = getHarvestLine();
   console.log(`HTTP sending ${msg} to gateway`);
-  axios.post(`http:${GATEWAY_HOST}:${GATEWAY_PORT}/${DOWNSTREAM_MESSAGE}`, {
+  axios.post(`http://${GATEWAY_URL}/${DOWNSTREAM_MESSAGE}`, {
     msg
   })
   .then((response) => {

@@ -7,10 +7,11 @@ const UPSTREAM_MESSAGE = process.env.UPSTREAM_MESSAGE||'processed_havest';
 
 //Node core
 const cluster = require("cluster");
-const http = require("http");
-
-const compression = require('compression');
+const {createServer} = require("http");
+const app = require('express')();
+const httpServer = createServer(app);
 const { Server } = require("socket.io");
+const io = new Server(httpServer);
 const { setupMaster, setupWorker } = require("@socket.io/sticky"); //https://socket.io/docs/v4/using-multiple-nodes
 
 //Gateway configuration
@@ -39,7 +40,6 @@ const {createAdapter} = require("@socket.io/redis-adapter"); //https://github.co
 if (cluster.isMaster) {
   console.log(`Master ${process.pid} is running`);
 
-  const httpServer = http.createServer();
   setupMaster(httpServer, {
     loadBalancingMethod: "least-connection", // either "random", "round-robin" or "least-connection"
   });
@@ -54,12 +54,6 @@ if (cluster.isMaster) {
     cluster.fork();
   });
 } else {
-    const app = require('express')();
-    app.use(compression);
-    const httpServer = http.createServer(app);
-  
-    var io = new Server(httpServer);
-        
     const downstreamRedisClient = redis.createClient(REDIS_URL),
           upstreamRedisClient = downstreamRedisClient.duplicate();
 

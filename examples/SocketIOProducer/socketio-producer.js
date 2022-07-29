@@ -6,10 +6,11 @@ const DOWNSTREAM_MESSAGE = process.env.DOWNSTREAM_MESSAGE||'harvest_line';
 const UPSTREAM_MESSAGE = process.env.UPSTREAM_MESSAGE||'processed_havest';
 const GATEWAY_HOST = process.env.GATEWAY_HOST||'api-gateway';
 const GATEWAY_PORT = process.env.GATEWAY_PORT||30000;
+const GATEWAY_URL = `http://${GATEWAY_HOST}:${GATEWAY_PORT}`;
 
 const http = require('http');
 const {io} = require('socket.io-client');
-const socket = io(`ws://${GATEWAY_HOST}:${GATEWAY_PORT}`);
+const socket = io(`http://${GATEWAY_HOST}:${GATEWAY_PORT}`);
 
 socket.connect();
 

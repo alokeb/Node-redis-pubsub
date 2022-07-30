@@ -56,7 +56,11 @@ if (cluster.isMaster) {
 } else {
     const downstreamRedisClient = redis.createClient(REDIS_URL),
           upstreamRedisClient = downstreamRedisClient.duplicate();
-
+    Promise.all([downstreamRedisClient.connect(), upstreamRedisClient.connect()]).then(() => {
+      io.adapter(createAdapter(downstreamRedisClient, upstreamRedisClient));
+      console.log('Worker pid:', process.pid, 'Connected via Redis pub sub');    
+    });
+    // const redisEmitter = new Emitter(downstreamRedisClient);
     upstreamRedisClient.on('error', (err) =>{
       console.log(`Error occured while connecting upstream to redis server. Is it available at ${REDIS_URL}?`, err);
       process.exit(-1);
@@ -75,19 +79,21 @@ if (cluster.isMaster) {
 
     //Creating HTTP route in here for now - not good but Ok for POC
     app.post(DOWNSTREAM_MESSAGE, function(req, res) {
+      console.log('Received request from HTTPProducer');
       //TODO: Relay to Redis
       //redisClient.publish(DOWNSTREAM_MESSAGE, req.);
+      //Send response back to consumer
     });
+    app.get("healthcheck", function(req, res){
+        downstreamRedisClient.ping(function (err, result) {
+          res.send(result);
+        });
+    }); 
     //TODO: HTTP Error Handling...
 
-    io.on("connection", (socket) => {
-      Promise.all([downstreamRedisClient.connect(), upstreamRedisClient.connect()]).then(() => {
-        io.adapter(createAdapter(downstreamRedisClient, upstreamRedisClient));
-        console.log('Worker pid:', process.pid, 'Connected via Redis pub sub');    
-      });
-      const redisEmitter = new Emitter(downstreamRedisClient);
-
-
+    io.on("connect", (socket) => {
+      console.log('Received socket connection');
+    
       socket.on('message', function (msg) { 
         if (msg.action === "subscribe") {
           console.log("Subscribe on " + msg.channel);
@@ -106,7 +112,7 @@ if (cluster.isMaster) {
       });
 
       socket.on(DOWNSTREAM_MESSAGE), function (msg) {
-        
+          //Do something
       };
     });
-}
+  }

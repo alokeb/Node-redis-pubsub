@@ -31,7 +31,7 @@ function publishMessage() {
   socket.emit(DOWNSTREAM_MESSAGE, msg);
 }
 
-socket.on("connection", (socket) => {
+socket.on("connect", (socket) => {
   console.log('Socket.io Producer connected to gateway');
 });
 

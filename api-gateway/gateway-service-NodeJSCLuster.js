@@ -2,14 +2,23 @@
 const DOWNSTREAM_MESSAGE = process.env.DOWNSTREAM_MESSAGE||'harvest_line';
 const UPSTREAM_MESSAGE = process.env.UPSTREAM_MESSAGE||'processed_havest';
 
-//Routes
-//var api = require('./routes/api');
-
 //Node core
 const cluster = require("cluster");
 const {createServer} = require("http");
-const app = require('express')();
+
+//Setup express app
+const express = require('express');
+const app = express();
+// for mounting static files to express server
+app.use(express.static(__dirname+'public/'));
+//Send a custom error response for unhandled routes
+app.get('*', function(req, res){
+  res.sendFile(__dirname+'/public/error.html');
+});
+
 const httpServer = createServer(app);
+
+//Setup Socket.io with sticky sessions
 const { Server } = require("socket.io");
 const io = new Server(httpServer);
 const { setupMaster, setupWorker } = require("@socket.io/sticky"); //https://socket.io/docs/v4/using-multiple-nodes
@@ -38,29 +47,38 @@ const {createAdapter} = require("@socket.io/redis-adapter"); //https://github.co
 // }
 
 if (cluster.isMaster) {
-  console.log(`Master ${process.pid} is running`);
+  //console.log(`Master ${process.pid} is running`);
 
   setupMaster(httpServer, {
     loadBalancingMethod: "least-connection", // either "random", "round-robin" or "least-connection"
   });
-  httpServer.listen(GATEWAY_PORT);
+  
+  httpServer.listen(GATEWAY_PORT, function (err) {
+    if(err){
+        console.log("error while starting server at container port:" + GATEWAY_PORT);
+    }
+    else{
+        console.log("api-gateway has been started at container port " + GATEWAY_PORT + " with " + numClusterWorkers + " workers.");
+    }
+  });
 
+  //Setup worker threads for the master in Socket.io cluster
   for (let i = 0; i < numClusterWorkers; i++) {
     cluster.fork();
   }
-
   cluster.on("exit", (worker) => {
     console.log(`Worker ${worker.process.pid} died, respawning...`);
     cluster.fork();
   });
 } else {
+    //Setup Redis pub sub connections
     const downstreamRedisClient = redis.createClient(REDIS_URL),
           upstreamRedisClient = downstreamRedisClient.duplicate();
     Promise.all([downstreamRedisClient.connect(), upstreamRedisClient.connect()]).then(() => {
       io.adapter(createAdapter(downstreamRedisClient, upstreamRedisClient));
-      console.log('Worker pid:', process.pid, 'Connected via Redis pub sub');    
+      //console.log('Worker pid:', process.pid, 'Connected via Redis pub sub');    
     });
-    // const redisEmitter = new Emitter(downstreamRedisClient);
+    
     upstreamRedisClient.on('error', (err) =>{
       console.log(`Error occured while connecting upstream to redis server. Is it available at ${REDIS_URL}?`, err);
       process.exit(-1);
@@ -70,26 +88,29 @@ if (cluster.isMaster) {
       process.exit(-1);
     });
 
+    //Now setup the worker so it works with the io object with Redis connections built 
     setupWorker(io);
-    console.log(`Worker ${process.pid} ready`);
+    //console.log(`Worker ${process.pid} ready`);
 
     //TODO: Figure out why routes in external file isn't working...
     // Make io accessible to our router
     //require('./routes/api')(io);
 
-    //Creating HTTP route in here for now - not good but Ok for POC
+    //Create HTTP routes
     app.post(DOWNSTREAM_MESSAGE, function(req, res) {
       console.log('Received request from HTTPProducer');
-      //TODO: Relay to Redis
-      //redisClient.publish(DOWNSTREAM_MESSAGE, req.);
+      downstreamClient.publish(DOWNSTREAM_MESSAGE, req);
       //Send response back to consumer
+      res.setHeader('Content-Type: text/plain; charset=UTF-8');
+      res.send('ACK');
     });
     app.get("healthcheck", function(req, res){
         downstreamRedisClient.ping(function (err, result) {
+          console.log('Redis said', result);
           res.send(result);
         });
     }); 
-    //TODO: HTTP Error Handling...
+    //TODO: HTTP Error Handling as necessary...
 
     io.on("connect", (socket) => {
       console.log('Received socket connection');
@@ -112,7 +133,7 @@ if (cluster.isMaster) {
       });
 
       socket.on(DOWNSTREAM_MESSAGE), function (msg) {
-          //Do something
+          downstreamRedisClient.publish(DOWNSTREAM_MESSAGE, msg);
       };
     });
   }

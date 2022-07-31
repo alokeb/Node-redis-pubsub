@@ -27,12 +27,12 @@ function getHarvestLine() {
 function publishMessage() {
   let msg = getHarvestLine();
 
-  console.log(`Socket.io sending ${msg} to gateway`);
+  console.log(`Socket.io sending ${msg} to ${GATEWAY_URL}`);
   socket.emit(DOWNSTREAM_MESSAGE, msg);
 }
 
-socket.on("connect", (socket) => {
-  console.log('Socket.io Producer connected to gateway');
+socket.on("connection", (socket) => {
+  console.log('Socket.io Producer connected to gateway', GATEWAY_URL);
 });
 
 socket.on("disconnect", (socket) => {

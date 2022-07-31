@@ -1,19 +1,36 @@
-var express = require('express');
-var router = express.Router();
+const express = require('express');
+const DOWNSTREAM_MESSAGE = process.env.DOWNSTREAM_MESSAGE||'harvest_line';
+const UPSTREAM_MESSAGE = process.env.UPSTREAM_MESSAGE||'processed_havest';
 
 /* GET home page. */
-var returnRouter = function(io) {
+var router = function(io, downstreamRedisClient, upstreamRedisClient) {
+    //Create HTTP routes
     router.get('/', function(req, res, next) {
-       res.send('OK');
+       res.send('Access NOT Allowed');
     });
 
-    router.post('/message', function(req, res) {
-        console.log("Post request hit.");
-        console.log(appjs);
-        io.sockets.emit("display text", req);
+    router.post(DOWNSTREAM_MESSAGE, function(req, res) {
+        console.log('Received request from HTTPProducer');
+        downstreamClient.publish(DOWNSTREAM_MESSAGE, req);
+        //Send response back to consumer
+        res.setHeader('Content-Type: text/plain; charset=UTF-8');
+        res.send('ACK');
+        res.end();
+      });
+    
+    //healthcheck call should respond with PONG
+    router.get("healthcheck", function(req, res){
+        downstreamRedisClient.ping(function (err, result) {
+            console.log('Redis said', result);
+            res.send(result);
+            res.end();
+        });
     });
 
-    return router;
-}
+    router.get('*'),  function(req, res) {
+        res.send('Nice try');
+        res.end();
+    }
 
-module.exports = returnRouter;
+    module.exports = router;
+};

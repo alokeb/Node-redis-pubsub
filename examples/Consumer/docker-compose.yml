@@ -5,8 +5,3 @@ services:
     container_name: consumer
     build: 
       context: .
-    ports:
-      - target: 3000
-        published: 30001
-        protocol: tcp
-        mode: host

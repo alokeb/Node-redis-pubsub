@@ -9,13 +9,6 @@ const {createServer} = require("http");
 //Setup express app
 const express = require('express');
 const app = express();
-// for mounting static files to express server
-app.use(express.static(__dirname+'public/'));
-//Send a custom error response for unhandled routes
-app.get('*', function(req, res){
-  res.sendFile(__dirname+'/public/error.html');
-});
-
 const httpServer = createServer(app);
 
 //Setup Socket.io with sticky sessions
@@ -93,27 +86,39 @@ if (cluster.isMaster) {
     //console.log(`Worker ${process.pid} ready`);
 
     //TODO: Figure out why routes in external file isn't working...
-    // Make io accessible to our router
-    //require('./routes/api')(io);
+    // Handle HTTP routes
+    //const routes = require('./routes/api')
+    //router(io, downstreamRedisClient, upstreamRedisClient);
 
-    //Create HTTP routes
-    app.post(DOWNSTREAM_MESSAGE, function(req, res) {
-      console.log('Received request from HTTPProducer');
-      downstreamClient.publish(DOWNSTREAM_MESSAGE, req);
-      //Send response back to consumer
-      res.setHeader('Content-Type: text/plain; charset=UTF-8');
-      res.send('ACK');
-    });
-    app.get("healthcheck", function(req, res){
+     //Handle HTTP REST calls
+     app.get('/', function(req, res) {
+      res.send('Access not Allowed');
+     });
+
+     app.get(`/${DOWNSTREAM_MESSAGE}`, function(req, res) {
+        console.log('Received request from HTTPProducer');
+        downstreamClient.publish(DOWNSTREAM_MESSAGE, req);
+        //Send acknoledge response back to consumer
+        res.setHeader('Content-Type: text/plain; charset=UTF-8');
+        res.send('ACK');
+        res.end();
+
+        //get the data and forward it to redis
+        io.emit(DOWNSTREAM_MESSAGE, req.body);
+      });
+    
+    //healthcheck call should respond with PONG
+    app.get('/healthcheck', function(req, res) {
         downstreamRedisClient.ping(function (err, result) {
-          console.log('Redis said', result);
-          res.send(result);
+            console.log('Redis said', result);
+            res.send(result);
+            res.end();
         });
-    }); 
-    //TODO: HTTP Error Handling as necessary...
-
+    });
+   
+    //Handle socket.io messages
     io.on("connect", (socket) => {
-      console.log('Received socket connection');
+      console.log('Received socket connection with message:', msg);
     
       socket.on('message', function (msg) { 
         if (msg.action === "subscribe") {
@@ -127,12 +132,13 @@ if (cluster.isMaster) {
       });
 
       socket.on('disconnect', function () { 
-        //Cleanup
+        //Cleanup Redis connections
         downstreamRedisClient.quit();
         upstreamRedisClient.quit();
       });
 
       socket.on(DOWNSTREAM_MESSAGE), function (msg) {
+          console.log(`Received ${msg} from socket.io client`);
           downstreamRedisClient.publish(DOWNSTREAM_MESSAGE, msg);
       };
     });

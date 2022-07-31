@@ -6,12 +6,6 @@ services:
     build: 
       context: .
       dockerfile: ./Gateway.Dockerfile
-    
-      
-    ports:
-      - target: 3000
-        published: 30000
-        protocol: tcp
 
 
   # If we decide to use nginx reverse proxy instead of Node JS socket.io cluster

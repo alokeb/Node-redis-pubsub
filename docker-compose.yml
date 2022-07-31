@@ -5,62 +5,98 @@ networks:
     driver: bridge
     internal: true
   external-network:
+    driver: bridge
     internal: false
+  #IPC Network for local development
+  inter:
+    driver: bridge
+    internal: true
+    driver_opts:
+      com.docker.network.bridge.name: dockerinter
 
 services:
   #On external network
   http-producer:
+    container_name: http-producer
+    hostname: http-producer
     extends:
       file: examples/HTTPProducer/docker-compose.yml
       service: http-producer
     networks:
       - external-network
+      - inter
     depends_on:
       - api-gateway
       
   socketio-producer:
+    container_name: socketio-producer
+    hostname: socketio-producer
     extends:
       file: examples/SocketIOProducer/docker-compose.yml
       service: socketio-producer
     networks:
-      - external-network
+      - internal-network
+      - inter
     depends_on:
       - api-gateway
 
   #Middleware
   api-gateway:
+    container_name: api-gateway
+    hostname: api-gateway
     extends:
       file: api-gateway/docker-compose.yml
       service: api-gateway
     networks:
       - internal-network
       - external-network
+      - inter
     depends_on:
       - redis
     environment:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      #Or if your hosting service provides a REDIS_URL for your cluster, use that instead of host and port
     ports:
-      - target: 3000
-        published: 30000
-        protocol: tcp
+      - 30000:3000
 
   #On internal network
   redis:
+    container_name: redis
+    hostname: redis
     image: redis
     networks:
       - internal-network
+      - inter
+    restart: always
     ports:
-      - target: 6379
-        published: 6379
-        protocol: tcp
+      - 6379:6379
+
+  redisinsight:
+    container_name: redisinsight
+    hostname: redisinsight
+    image: redislabs/redisinsight
+    networks:
+      - internal-network
+      - inter
+    depends_on:
+      - redis
+    ports:
+      - 8001:8001
+    environment:
+    # - REDIS_URL= ...
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
   
   consumer:
+    container_name: consumer
+    hostname: consumer
     extends:
       file: examples/Consumer/docker-compose.yml
       service: consumer
     networks:
       - internal-network
+      - inter
     depends_on:
       - redis
     environment:

@@ -4,15 +4,14 @@ const fruitssize = fruits.length;
 const monthssize = months.length;
 const DOWNSTREAM_MESSAGE = process.env.DOWNSTREAM_MESSAGE||'harvest_line';
 const UPSTREAM_MESSAGE = process.env.UPSTREAM_MESSAGE||'processed_havest';
-const GATEWAY_HOST = process.env.GATEWAY_HOST||'api-gateway';
-const GATEWAY_PORT = process.env.GATEWAY_PORT||30000;
-const GATEWAY_URL = `http://${GATEWAY_HOST}:${GATEWAY_PORT}`;
+const GATEWAY_URL = process.env.GATEWAY_URL||'http://api-gateway:30000';
 
-const http = require('http');
 const {io} = require('socket.io-client');
-const socket = io(`http://${GATEWAY_HOST}:${GATEWAY_PORT}`);
+const socket = io.connect(GATEWAY_URL, {reconnect: true});
 
-socket.connect();
+socket.on('connect', function (socket) {
+  console.log('Connected to ', GATEWAY_URL);
+});
 
 function getHarvestLine() {
   //Mock simulate a record read entry
@@ -27,13 +26,9 @@ function getHarvestLine() {
 function publishMessage() {
   let msg = getHarvestLine();
 
-  console.log(`Socket.io sending ${msg} to ${GATEWAY_URL}`);
+  //console.log(`Socket.io sending ${msg} to ${GATEWAY_URL}`);
   socket.emit(DOWNSTREAM_MESSAGE, msg);
 }
-
-socket.on("connection", (socket) => {
-  console.log('Socket.io Producer connected to gateway', GATEWAY_URL);
-});
 
 socket.on("disconnect", (socket) => {
   console.log('Socket.io Producer disconnected from gateway');

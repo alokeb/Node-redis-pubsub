@@ -1,6 +1,6 @@
 
-const DOWNSTREAM_MESSAGE = process.env.DOWNSTREAM_MESSAGE||'harvest_line';
-const UPSTREAM_MESSAGE = process.env.UPSTREAM_MESSAGE||'processed_havest';
+const DOWNSTREAM_MESSAGE = process.env.DOWNSTREAM_MESSAGE||'/harvest_line';
+const UPSTREAM_MESSAGE = process.env.UPSTREAM_MESSAGE||'/processed_havest';
 
 //Node core
 const cluster = require("cluster");
@@ -21,9 +21,7 @@ const numClusterWorkers = process.env.NUM_GATEWAY_CLUSTER_WORKERS || Math.max(re
 const GATEWAY_PORT = 3000;
 
 //Redis configuration
-const REDIS_HOST = process.env.REDIS_HOST || "redis";
-const REDIS_PORT = process.env.REDIS_PORT || 6379;
-const REDIS_URL = process.env.REDIS_URL||{url: `redis://${REDIS_HOST}:${REDIS_PORT}`};
+const REDIS_URL = process.env.REDIS_URL||{url: 'redis://redis:6379'};
 const redis = require('redis');
 const {createAdapter} = require("@socket.io/redis-adapter"); //https://github.com/socketio/socket.io-redis-adapter#migrating-from-socketio-redis
 
@@ -39,6 +37,7 @@ const {createAdapter} = require("@socket.io/redis-adapter"); //https://github.co
 //   };
 // }
 
+//Create socket.io cluster with 1 master controlling the worker pool
 if (cluster.isMaster) {
   //console.log(`Master ${process.pid} is running`);
 
@@ -68,8 +67,13 @@ if (cluster.isMaster) {
     const downstreamRedisClient = redis.createClient(REDIS_URL),
           upstreamRedisClient = downstreamRedisClient.duplicate();
     Promise.all([downstreamRedisClient.connect(), upstreamRedisClient.connect()]).then(() => {
+      downstreamRedisClient.on('error', err => {
+          console.log('Downstream Redis client connection error: ' + err);
+      });
+      upstreamRedisClient.on('error', err => {
+        console.log('Upstream Redis client connection error: ' + err);
+      });
       io.adapter(createAdapter(downstreamRedisClient, upstreamRedisClient));
-      //console.log('Worker pid:', process.pid, 'Connected via Redis pub sub');    
     });
     
     upstreamRedisClient.on('error', (err) =>{
@@ -92,33 +96,46 @@ if (cluster.isMaster) {
 
      //Handle HTTP REST calls
      app.get('/', function(req, res) {
-      res.send('Access not Allowed');
+      res.header('Content-Type: text/plain; charset=UTF-8');
+      res.status(403).end('Access denied');
      });
 
-     app.get(`/${DOWNSTREAM_MESSAGE}`, function(req, res) {
+     app.get(DOWNSTREAM_MESSAGE, function(req, res) {
         console.log('Received request from HTTPProducer');
-        downstreamClient.publish(DOWNSTREAM_MESSAGE, req);
+        //downstreamRedisClient.publish(DOWNSTREAM_MESSAGE, req);
         //Send acknoledge response back to consumer
-        res.setHeader('Content-Type: text/plain; charset=UTF-8');
-        res.send('ACK');
-        res.end();
+        res.header('Content-Type: text/plain; charset=UTF-8');
+        res.status(200).end('ACK');
 
         //get the data and forward it to redis
         io.emit(DOWNSTREAM_MESSAGE, req.body);
       });
     
-    //healthcheck call should respond with PONG
     app.get('/healthcheck', function(req, res) {
-        downstreamRedisClient.ping(function (err, result) {
-            console.log('Redis said', result);
-            res.send(result);
-            res.end();
-        });
+      res.header('Content-type: application/json; charset=UTF-8');
+      async function healthCheck() {
+        try {
+         await Promise.all([
+          // check first if not connected yet (lazy connect)
+          upstreamRedisClient.status === 'wait' ? Promise.resolve() : upstreamRedisClient.ping(),
+          downstreamRedisClient.status === 'wait' ? Promise.resolve() : downstreamRedisClient.ping()
+         ])
+        } catch (err) {
+         const error = new Error('One or more client status are not healthy')
+         error.status = {
+          upstreamRedisClient: upstreamRedisClient.status,
+          downstreamRedisClient: downstreamRedisClient.status
+         }
+         
+         res.status(500).end(JSON.stringify(error));
+        }
+        res.status(200).end(JSON.stringify(upstreamRedisClient.status, downstreamRedisClient.status));
+       }
     });
    
     //Handle socket.io messages
-    io.on("connect", (socket) => {
-      console.log('Received socket connection with message:', msg);
+    io.on("connection", (socket) => {
+      console.log('Socket connected with ID:', socket.id);
     
       socket.on('message', function (msg) { 
         if (msg.action === "subscribe") {

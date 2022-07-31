@@ -4,11 +4,8 @@ const fruits = process.env.FRUIT ||  ["Strawberry", "Apple", "Banana", "Tomato"]
 const months = process.env.MONTH || ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const fruitssize = fruits.length;
 const monthssize = months.length;
-const GATEWAY_HOST = process.env.GATEWAY_HOST||'api-gateway';
-const GATEWAY_PORT = process.env.GATEWAY_PORT||30000;
-
 const DOWNSTREAM_MESSAGE = process.env.DOWNSTREAM_MESSAGE||'harvest_line';
-var GATEWAY_URL = "http://"+GATEWAY_HOST+":"+GATEWAY_PORT+"/"+DOWNSTREAM_MESSAGE;
+var GATEWAY_URL = process.env.GATEWAY_URL||'http://api-gateway:30000/harvest_line';
 const axios = require('axios')
 
 

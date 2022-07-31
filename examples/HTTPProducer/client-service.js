@@ -24,10 +24,10 @@ setInterval(() => {
   console.log(`HTTP sending ${msg} to ${GATEWAY_URL}`);  
 
   axios({
-    method: 'POST',
+    method: 'get',
     url: GATEWAY_URL, 
     data: JSON.stringify(msg), 
-    headers:{'Content-Type': 'application/json; charset=utf-8'}
+    headers:{Accept: 'text/html, application/json, text/plain, */*'}
 }) 
   .then((res) => {
     console.log(`statusCode: ${res.status}`)

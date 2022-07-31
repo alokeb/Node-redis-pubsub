@@ -1,6 +1,38 @@
 version: '3.9'
 
 services:
+ #On internal network
+  redis:
+    container_name: redis
+    hostname: redis
+    image: redis
+    restart: always
+    ports:
+      - 6379:6379
+
+  redisinsight:
+    container_name: redisinsight
+    hostname: redisinsight
+    image: redislabs/redisinsight:latest
+    depends_on:
+      - redis
+    ports:
+      - 8001:8001
+    #Go to localhost:8001 in your browser, agree to their terms, then "I already have a redis database", enter 'redis' for host and 6379 as port if composing up via this file...
+
+  api-gateway:
+    container_name: api-gateway
+    hostname: api-gateway
+    extends:
+      file: api-gateway/docker-compose.yml
+      service: api-gateway
+    depends_on:
+      - redis
+    #environment:
+    # - REDIS_URL= ...
+    ports:
+      - 30000:3000
+  
   http-producer:
     container_name: http-producer
     hostname: http-producer
@@ -19,39 +51,6 @@ services:
     depends_on:
       - api-gateway
 
-  api-gateway:
-    container_name: api-gateway
-    hostname: api-gateway
-    extends:
-      file: api-gateway/docker-compose.yml
-      service: api-gateway
-    depends_on:
-      - redis
-    #environment:
-    # - REDIS_URL= ...
-    ports:
-      - 30000:3000
-
-  #On internal network
-  redis:
-    container_name: redis
-    hostname: redis
-    image: redis
-    restart: always
-    ports:
-      - 6379:6379
-
-  redisinsight:
-    container_name: redisinsight
-    hostname: redisinsight
-    image: redislabs/redisinsight
-    depends_on:
-      - redis
-    ports:
-      - 8001:8001
-    #environment:
-    # - REDIS_URL= ...
-
   consumer:
     container_name: consumer
     hostname: consumer
@@ -62,3 +61,5 @@ services:
       - redis
     #environment:
     # - REDIS_URL= ...
+
+ 

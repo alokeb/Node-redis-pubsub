@@ -66,6 +66,7 @@ if (cluster.isMaster) {
     //Setup Redis pub sub connections
     const downstreamRedisClient = redis.createClient(REDIS_URL),
           upstreamRedisClient = downstreamRedisClient.duplicate();
+
     Promise.all([downstreamRedisClient.connect(), upstreamRedisClient.connect()]).then(() => {
       downstreamRedisClient.on('error', err => {
           console.log('Downstream Redis client connection error: ' + err);
@@ -89,11 +90,6 @@ if (cluster.isMaster) {
     setupWorker(io);
     //console.log(`Worker ${process.pid} ready`);
 
-    //TODO: Figure out why routes in external file isn't working...
-    // Handle HTTP routes
-    //const routes = require('./routes/api')
-    //router(io, downstreamRedisClient, upstreamRedisClient);
-
      //Handle HTTP REST calls
      app.get('/', function(req, res) {
       res.header('Content-Type: text/plain; charset=UTF-8');
@@ -107,56 +103,37 @@ if (cluster.isMaster) {
         res.header('Content-Type: text/plain; charset=UTF-8');
         res.status(200).end('ACK');
 
-        //get the data and forward it to redis
-        io.emit(DOWNSTREAM_MESSAGE, req.body);
+        //get the data and forward it to redis in the httproom so we know this came from REST call
+        io.to('httproom').emit(DOWNSTREAM_MESSAGE, req.body);
       });
     
     app.get('/healthcheck', function(req, res) {
       res.header('Content-type: application/json; charset=UTF-8');
-      async function healthCheck() {
-        try {
-         await Promise.all([
-          // check first if not connected yet (lazy connect)
-          upstreamRedisClient.status === 'wait' ? Promise.resolve() : upstreamRedisClient.ping(),
-          downstreamRedisClient.status === 'wait' ? Promise.resolve() : downstreamRedisClient.ping()
-         ])
-        } catch (err) {
-         const error = new Error('One or more client status are not healthy')
-         error.status = {
-          upstreamRedisClient: upstreamRedisClient.status,
-          downstreamRedisClient: downstreamRedisClient.status
-         }
-         
-         res.status(500).end(JSON.stringify(error));
-        }
-        res.status(200).end(JSON.stringify(upstreamRedisClient.status, downstreamRedisClient.status));
-       }
+      const data = {
+        uptime: process.uptime(),
+        message: 'Ok',
+        date: new Date()
+      }
+      
+      res.status(200).end(data);
     });
+    
+    //Redis healthCheck should be done via an external process, it is not a function of this gateway
+    //Upon failure of Redis health, appropriate actions including restarting gateway should be performed.
    
     //Handle socket.io messages
     io.on("connection", (socket) => {
-      console.log('Socket connected with ID:', socket.id);
-    
-      socket.on('message', function (msg) { 
-        if (msg.action === "subscribe") {
-          console.log("Subscribe on " + msg.channel);
-          downstreamRedisClient.subscribe(msg.channel);    
-        }
-        if (msg.action === "unsubscribe") {
-          console.log("Unsubscribe from" + msg.channel);      
-          downstreamRedisClient.unsubscribe(msg.channel); 
-        }
-      });
+      console.log(io.of("/").adapter);
 
-      socket.on('disconnect', function () { 
-        //Cleanup Redis connections
-        downstreamRedisClient.quit();
-        upstreamRedisClient.quit();
-      });
+      //The redis adapter will publish directly
+      // socket.on(DOWNSTREAM_MESSAGE), function (msg) {
+      //     console.log(`Received ${msg} from socket.io client`);
+      // };
+      
+      // socket.on(UPSTREAM_MESSAGE), function (msg) {
+      //     console.log(`Received ${msg} from socket.io client`);
+      // };
 
-      socket.on(DOWNSTREAM_MESSAGE), function (msg) {
-          console.log(`Received ${msg} from socket.io client`);
-          downstreamRedisClient.publish(DOWNSTREAM_MESSAGE, msg);
-      };
+
     });
   }

@@ -1,5 +1,8 @@
 FROM node:bullseye-slim
 
+RUN apt-get update && \
+    apt-get install -y iputils-ping curl
+
 # Bundle app source
 COPY . /app
 WORKDIR /app

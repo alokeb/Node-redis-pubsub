@@ -4,7 +4,7 @@ const fruitssize = fruits.length;
 const monthssize = months.length;
 const DOWNSTREAM_MESSAGE = process.env.DOWNSTREAM_MESSAGE||'harvest_line';
 const UPSTREAM_MESSAGE = process.env.UPSTREAM_MESSAGE||'processed_havest';
-const GATEWAY_URL = process.env.GATEWAY_URL||'http://api-gateway:30000';
+const GATEWAY_URL = process.env.GATEWAY_URL||'http://api-gateway:3000';
 
 const {io} = require('socket.io-client');
 const socket = io.connect(GATEWAY_URL, {reconnect: true});

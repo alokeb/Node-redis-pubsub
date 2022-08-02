@@ -1,30 +1,19 @@
+const { Emitter } = require('@socket.io/redis-emitter');
+const { createClient } = require('redis');
 
-const REDIS_HOST = process.env.REDIS_HOST || 'redis';
-const REDIS_PORT = process.env.REDIS_PORT || 6379;
-const REDIS_URL = process.env.REDIS_URL||{url: `redis://${REDIS_HOST}:${REDIS_PORT}`};
-const downstreamRedisChannel = "harvest_line";
-const upstreamRedisChannel = "processed_harvest";
+const pubClient = createClient({ url: "redis://redis:6379" });
+const subClient = pubClient.duplicate();
 
-var 
-    server = require('http').createServer();
-    redis = require('redis'),
-    subscriber = redis.createClient(REDIS_URL),
-    publisher = subscriber.duplicate();
-
-
-subscriber.on('error', (err) => console.log('Redis Client Error', err));
-subscriber.connect();
-
-subscriber.subscribe('harvest_line', (message) => {
-  console.log(message); // 'message'
+Promise.all([pubClient.connect(), subClient.connect()]).then(() => {
+  pubClient.on('error', err => {
+    console.log('Downstream Redis client connection error: ' + err);
+  });
+  subClient.on('error', err => {
+    console.log('Upstream Redis client connection error: ' + err);
+  });
+  
+  const emitter = new Emitter(pubClient);
+  subClient.subscribe('harvest_line', message => {
+    console.log('Received Redis message', message);
+  });
 });
-
-subscriber.subscribe(downstreamRedisChannel);
-
-subscriber.on('harvest_line', function(channel, message){
-  //TODO: process incoming harvest
-
-  //publisher.publish(upstreamRedisChannel, message);
-});
-
-server.listen(3000);

@@ -1,6 +1,6 @@
 
-const DOWNSTREAM_MESSAGE = process.env.DOWNSTREAM_MESSAGE||'/harvest_line';
-const UPSTREAM_MESSAGE = process.env.UPSTREAM_MESSAGE||'/processed_havest';
+const DOWNSTREAM_MESSAGE = process.env.DOWNSTREAM_MESSAGE||'harvest_line';
+const UPSTREAM_MESSAGE = process.env.UPSTREAM_MESSAGE||'processed_havest';
 
 //Node core
 const cluster = require("cluster");
@@ -64,24 +64,24 @@ if (cluster.isMaster) {
   });
 } else {
     //Setup Redis pub sub connections
-    const downstreamRedisClient = redis.createClient(REDIS_URL),
-          upstreamRedisClient = downstreamRedisClient.duplicate();
+    const pubClient = redis.createClient(REDIS_URL),
+          subClient = pubClient.duplicate();
 
-    Promise.all([downstreamRedisClient.connect(), upstreamRedisClient.connect()]).then(() => {
-      downstreamRedisClient.on('error', err => {
+    Promise.all([pubClient.connect(), subClient.connect()]).then(() => {
+      pubClient.on('error', err => {
           console.log('Downstream Redis client connection error: ' + err);
       });
-      upstreamRedisClient.on('error', err => {
+      subClient.on('error', err => {
         console.log('Upstream Redis client connection error: ' + err);
       });
-      io.adapter(createAdapter(downstreamRedisClient, upstreamRedisClient));
+      io.adapter(createAdapter(pubClient, subClient));
     });
     
-    upstreamRedisClient.on('error', (err) =>{
+    subClient.on('error', (err) =>{
       console.log(`Error occured while connecting upstream to redis server. Is it available at ${REDIS_URL}?`, err);
       process.exit(-1);
     });
-    downstreamRedisClient.on('error', (err) =>{
+    pubClient.on('error', (err) =>{
       console.log(`Error occured while connecting downstream to redis server. Is it available at ${REDIS_URL}?`, err);
       process.exit(-1);
     });
@@ -90,22 +90,24 @@ if (cluster.isMaster) {
     setupWorker(io);
     //console.log(`Worker ${process.pid} ready`);
 
-     //Handle HTTP REST calls
-     app.get('/', function(req, res) {
+    //Handle HTTP REST calls
+    app.get('/', function(req, res) {
       res.header('Content-Type: text/plain; charset=UTF-8');
       res.status(403).end('Access denied');
      });
 
-     app.get(DOWNSTREAM_MESSAGE, function(req, res) {
-        console.log('Received request from HTTPProducer');
-        //downstreamRedisClient.publish(DOWNSTREAM_MESSAGE, req);
-        //Send acknoledge response back to consumer
+    app.get('/'+DOWNSTREAM_MESSAGE, function(req, res) {
+        
+
+        let payload = '{fruit: '+ req.query.fruit + ', month: ' + req.query.month + '}';
+        //Send acknowledge response back to http producer
         res.header('Content-Type: text/plain; charset=UTF-8');
         res.status(200).end('ACK');
 
         //get the data and forward it to redis in the httproom so we know this came from REST call
-        io.to('httproom').emit(DOWNSTREAM_MESSAGE, req.body);
-      });
+        console.log(`Publishing ${payload} to Redis`)
+        pubClient.publish(DOWNSTREAM_MESSAGE, payload);
+    });
     
     app.get('/healthcheck', function(req, res) {
       res.header('Content-type: application/json; charset=UTF-8');
@@ -123,7 +125,7 @@ if (cluster.isMaster) {
    
     //Handle socket.io messages
     io.on("connection", (socket) => {
-      console.log(io.of("/").adapter);
+      console.log('Received socket.io connection');
 
       //The redis adapter will publish directly
       // socket.on(DOWNSTREAM_MESSAGE), function (msg) {

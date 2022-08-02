@@ -10,6 +10,7 @@ services:
     ports:
       - 6379:6379
 
+  #Optional if you'd like a Redis client
   redisinsight:
     container_name: redisinsight
     hostname: redisinsight

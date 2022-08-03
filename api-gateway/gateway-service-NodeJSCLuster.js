@@ -97,16 +97,18 @@ if (cluster.isMaster) {
      });
 
     app.get('/'+DOWNSTREAM_MESSAGE, function(req, res) {
+      let payload = '{"fruit": "'+ req.query.fruit + '", "month": "' + req.query.month + '"}';
+      
+      //get the data and forward it to redis in the httproom so we know this came from REST call
+      console.log(`Publishing ${payload} to Redis`);
+      pubClient.publish(DOWNSTREAM_MESSAGE, payload);
+      
+      //Listen for response from consumer and send it to http client
+      subClient.subscribe(UPSTREAM_MESSAGE, message => {
+        console.log('Got response from consumer, sending to http client');
+        res.status(200).end(message);
         
-
-        let payload = '{fruit: '+ req.query.fruit + ', month: ' + req.query.month + '}';
-        //Send acknowledge response back to http producer
-        res.header('Content-Type: text/plain; charset=UTF-8');
-        res.status(200).end('ACK');
-
-        //get the data and forward it to redis in the httproom so we know this came from REST call
-        console.log(`Publishing ${payload} to Redis`)
-        pubClient.publish(DOWNSTREAM_MESSAGE, payload);
+      });
     });
     
     app.get('/healthcheck', function(req, res) {

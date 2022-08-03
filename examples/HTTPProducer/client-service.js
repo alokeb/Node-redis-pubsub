@@ -27,7 +27,7 @@ function publishMessage() {
       month: currentMonth
     }
   }).then(res => {
-      console.log(res.statusCode);
+      console.log(res.data);
   }) 
 }
 

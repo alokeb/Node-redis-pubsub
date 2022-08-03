@@ -1,4 +1,3 @@
-const { Emitter } = require('@socket.io/redis-emitter');
 const { createClient } = require('redis');
 
 const pubClient = createClient({ url: "redis://redis:6379" });
@@ -12,8 +11,26 @@ Promise.all([pubClient.connect(), subClient.connect()]).then(() => {
     console.log('Upstream Redis client connection error: ' + err);
   });
   
-  const emitter = new Emitter(pubClient);
   subClient.subscribe('harvest_line', message => {
     console.log('Received Redis message', message);
+   
+    //Just doing some random tally of how many times we've received a fruit and month with no relationship between the two
+    const obj = JSON.parse(message);
+    if (!pubClient.get(obj.fruit)) {
+      pubClient.set(obj.fruit, 1);
+    } else {
+      pubClient.incr(obj.fruit);
+    }
+    if (!pubClient.get(obj.month)) {
+      pubClient.set(obj.month, 1);
+    } else {
+      pubClient.incr(obj.month);
+    }
+
+    const currentMonthTally = pubClient.get(obj.month);
+    const currentFruitTally = pubClient.get(obj.fruit);
+
+    pubClient.publish('processed_havest', `ACK: ${obj.month}=${currentMonthTally} ${obj.fruit}=${currentFruitTally}`);
+    console.log('Sent response back to gateway');
   });
 });

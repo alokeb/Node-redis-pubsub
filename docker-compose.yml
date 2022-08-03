@@ -32,7 +32,7 @@ services:
     #environment:
     # - REDIS_URL= ...
     ports:
-      - 30000:3000
+      - 3000:3000
   
   http-producer:
     container_name: http-producer

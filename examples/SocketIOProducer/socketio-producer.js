@@ -34,7 +34,9 @@ socket.on("disconnect", (socket) => {
   console.log('Socket.io Producer disconnected from gateway');
 });
 
-setInterval(publishMessage, 1000);
+socket.on("connect", (socket) => {
+  setInterval(publishMessage, 1000);
+});
 
 socket.on(UPSTREAM_MESSAGE, (msg) => {
   console.log('Received message from gateway:', msg);

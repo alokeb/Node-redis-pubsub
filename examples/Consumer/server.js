@@ -14,7 +14,7 @@ Promise.all([pubClient.connect(), subClient.connect()]).then(() => {
   subClient.subscribe('harvest_line', message => {
     console.log('Received Redis message', message);
    
-    //Just doing some random tally of how many times we've received a fruit and month with no relationship between the two
+    //Just doing some random processing here... keeping a count of how many times a particular fruit and a particular month were encountered
     const obj = JSON.parse(message);
     if (!pubClient.get(obj.fruit)) {
       pubClient.set(obj.fruit, 1);

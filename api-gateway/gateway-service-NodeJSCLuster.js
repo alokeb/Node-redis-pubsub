@@ -3,21 +3,18 @@ const DOWNSTREAM_MESSAGE = process.env.DOWNSTREAM_MESSAGE||'harvest_line';
 const UPSTREAM_MESSAGE = process.env.UPSTREAM_MESSAGE||'processed_havest';
 
 //Node core
-const cluster = require("cluster");
-const {createServer} = require("http");
+const http = require('http');
+const cluster = require('cluster');
 
 //Setup express app
 const express = require('express');
 const app = express();
-const httpServer = createServer(app);
+const httpServer = http.createServer(app);
 
-//Setup Socket.io with sticky sessions
 const { Server } = require("socket.io");
 const io = new Server(httpServer);
-const { setupMaster, setupWorker } = require("@socket.io/sticky"); //https://socket.io/docs/v4/using-multiple-nodes
 
 //Gateway configuration
-const numClusterWorkers = process.env.NUM_GATEWAY_CLUSTER_WORKERS || Math.max(require("os").cpus().length, 2); //Minimum of two workers by default
 const GATEWAY_PORT = 3000;
 
 //Redis configuration
@@ -37,32 +34,18 @@ const {createAdapter} = require("@socket.io/redis-adapter"); //https://github.co
 //   };
 // }
 
-//Create socket.io cluster with 1 master controlling the worker pool
-if (cluster.isMaster) {
-  //console.log(`Master ${process.pid} is running`);
+var sticky = require('sticky-session');
+//sticky.listen() will return false if Master
+if (!sticky.listen(httpServer, GATEWAY_PORT)) { 
+  // Master code
 
-  setupMaster(httpServer, {
-    loadBalancingMethod: "least-connection", // either "random", "round-robin" or "least-connection"
-  });
-  
-  httpServer.listen(GATEWAY_PORT, function (err) {
-    if(err){
-        console.log("error while starting server at container port:" + GATEWAY_PORT);
-    }
-    else{
-        console.log("api-gateway has been started at container port " + GATEWAY_PORT + " with " + numClusterWorkers + " workers.");
-    }
-  });
-
-  //Setup worker threads for the master in Socket.io cluster
-  for (let i = 0; i < numClusterWorkers; i++) {
-    cluster.fork();
-  }
-  cluster.on("exit", (worker) => {
-    console.log(`Worker ${worker.process.pid} died, respawning...`);
-    cluster.fork();
+  httpServer.once('listening', function() {
+    console.log('Gateway started on port', GATEWAY_PORT);
   });
 } else {
+    //Worker setup and code goes here...
+  
+    
     //Setup Redis pub sub connections
     const pubClient = redis.createClient(REDIS_URL),
           subClient = pubClient.duplicate();
@@ -86,42 +69,6 @@ if (cluster.isMaster) {
       process.exit(-1);
     });
 
-    //Now setup the worker so it works with the io object with Redis connections built 
-    setupWorker(io);
-    //console.log(`Worker ${process.pid} ready`);
-
-    //Handle HTTP REST calls
-    app.get('/', function(req, res) {
-      res.header('Content-Type: text/plain; charset=UTF-8');
-      res.status(403).end('Access denied');
-     });
-
-    app.get('/'+DOWNSTREAM_MESSAGE, function(req, res) {
-      let payload = '{"fruit": "'+ req.query.fruit + '", "month": "' + req.query.month + '"}';
-      
-      //get the data and forward it to redis in the httproom so we know this came from REST call
-      console.log(`Publishing ${payload} to Redis`);
-      pubClient.publish(DOWNSTREAM_MESSAGE, payload);
-      
-      //Listen for response from consumer and send it to http client
-      subClient.subscribe(UPSTREAM_MESSAGE, message => {
-        console.log('Got response from consumer, sending to http client');
-        res.status(200).end(message);
-        
-      });
-    });
-    
-    app.get('/healthcheck', function(req, res) {
-      res.header('Content-type: application/json; charset=UTF-8');
-      const data = {
-        uptime: process.uptime(),
-        message: 'Ok',
-        date: new Date()
-      }
-      
-      res.status(200).end(data);
-    });
-    
     //Redis healthCheck should be done via an external process, it is not a function of this gateway
     //Upon failure of Redis health, appropriate actions including restarting gateway should be performed.
    
@@ -137,7 +84,34 @@ if (cluster.isMaster) {
       // socket.on(UPSTREAM_MESSAGE), function (msg) {
       //     console.log(`Received ${msg} from socket.io client`);
       // };
+    });
 
+    //Handle HTTP REST calls
+    app.get('/', function(req, res) {
+      res.header('Content-Type: text/plain; charset=UTF-8');
+      res.status(403).end('Access denied');
+    });
 
+    app.get('/healthcheck', function(req, res) {
+      res.header('Content-type: application/json; charset=UTF-8');
+      const data = {
+        uptime: process.uptime(),
+        message: 'Ok',
+        date: new Date()
+      }
+      
+      res.status(200).end(data.toString());
+    });
+
+    app.get('/'+DOWNSTREAM_MESSAGE, function(req, res) {
+      let payload = '{"fruit": "'+ req.query.fruit + '", "month": "' + req.query.month + '"}';
+      
+      //get the data and forward it to redis directly
+      pubClient.publish(DOWNSTREAM_MESSAGE, payload);
+      
+      //Listen for response from consumer and send it to http client
+      subClient.subscribe(UPSTREAM_MESSAGE, message => {
+        res.status(200).end(message);
+      });
     });
   }

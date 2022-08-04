@@ -27,10 +27,7 @@ Promise.all([pubClient.connect(), subClient.connect()]).then(() => {
       pubClient.incr(obj.month);
     }
 
-    const currentMonthTally = pubClient.get(obj.month);
-    const currentFruitTally = pubClient.get(obj.fruit);
-
-    pubClient.publish('processed_havest', `ACK: ${obj.month}=${currentMonthTally} ${obj.fruit}=${currentFruitTally}`);
-    console.log('Sent response back to gateway');
+    pubClient.publish('processed_havest', `ACK: Updated ${obj.fruit}, ${obj.month} tallies`);
+    
   });
 });

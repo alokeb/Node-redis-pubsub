@@ -19,7 +19,16 @@ function publishMessage() {
   const values = getHarvestLine();
   let currentFruit = values[0];
   let currentMonth = values[1];
-   
+  
+  axios.interceptors.request.use(request => {
+    console.log('Sending', request.params);
+    return request;
+  });
+  axios.interceptors.response.use(response => {
+    console.log('Response:', response.data);
+    return response;
+  });
+
   axios.get('http://api-gateway:3000/harvest_line', {
     headers:{Accept: 'text/html, application/json, text/plain, */*'},
     params: {
@@ -27,8 +36,9 @@ function publishMessage() {
       month: currentMonth
     }
   }).then(res => {
-      console.log(res.data);
-  }) 
+    //Process the response as you see fit...
+    res.end;
+  });
 }
 
-setInterval(publishMessage,1000);
+setInterval(publishMessage,5000);

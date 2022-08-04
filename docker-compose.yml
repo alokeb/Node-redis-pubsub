@@ -42,10 +42,28 @@ services:
       service: http-producer
     depends_on:
       - api-gateway
+
+  http-producer2:
+    container_name: http-producer2
+    hostname: http-producer2
+    extends:
+      file: examples/HTTPProducer/docker-compose.yml
+      service: http-producer
+    depends_on:
+      - api-gateway
       
   socketio-producer:
     container_name: socketio-producer
     hostname: socketio-producer
+    extends:
+      file: examples/SocketIOProducer/docker-compose.yml
+      service: socketio-producer
+    depends_on:
+      - api-gateway
+      
+  socketio-producer2:
+    container_name: socketio-producer2
+    hostname: socketio-producer2
     extends:
       file: examples/SocketIOProducer/docker-compose.yml
       service: socketio-producer

@@ -33,7 +33,52 @@ const {createAdapter} = require("@socket.io/redis-adapter"); //https://github.co
 //     cert: cert,
 //   };
 // }
+   
+ //Setup Redis pub sub connections
+const httpPubClient = redis.createClient(REDIS_URL),
+      httpSubClient = httpPubClient.duplicate();
 
+Promise.all([httpPubClient.connect(), httpSubClient.connect()]).then(() => {
+  httpPubClient.on('error', err => {
+      console.log('Downstream Redis client connection error: ' + err);
+      process.exit(-1);
+  });
+  httpSubClient.on('error', err => {
+    console.log('Upstream Redis client connection error: ' + err);
+    process.exit(-1);
+  });
+  //Handle HTTP REST calls
+  app.get('/', function(req, res) {
+    res.header('Content-Type: text/plain; charset=UTF-8');
+    res.status(403).end('Access denied');
+  });
+
+  app.get('/healthcheck', function(req, res) {
+    res.header('Content-type: application/json; charset=UTF-8');
+    const data = {
+      uptime: process.uptime(),
+      message: 'Ok',
+      date: new Date()
+    }
+    
+    res.status(200).end(data.toString());
+  });
+
+  app.get('/'+DOWNSTREAM_MESSAGE, function(req, res) {
+    let payload = '{"fruit": "'+ req.query.fruit + '", "month": "' + req.query.month + '"}';
+    
+    //get the data and forward it to redis directly
+    httpPubClient.publish(DOWNSTREAM_MESSAGE, payload);
+    
+    //Listen for response from consumer and send it to http client
+    httpSubClient.subscribe(UPSTREAM_MESSAGE, message => {
+      res.status(200).end(message);
+    });
+  }); 
+});
+
+
+//Setup sticky session cluster
 var sticky = require('sticky-session');
 //sticky.listen() will return false if Master
 if (!sticky.listen(httpServer, GATEWAY_PORT)) { 
@@ -43,75 +88,43 @@ if (!sticky.listen(httpServer, GATEWAY_PORT)) {
     console.log('Gateway started on port', GATEWAY_PORT);
   });
 } else {
-    //Worker setup and code goes here...
-  
-    
+    //Cluster worker setup and code goes here...
+      
     //Setup Redis pub sub connections
-    const pubClient = redis.createClient(REDIS_URL),
-          subClient = pubClient.duplicate();
+    const ioPubClient = redis.createClient(REDIS_URL),
+          ioSubClient = ioPubClient.duplicate();
 
-    Promise.all([pubClient.connect(), subClient.connect()]).then(() => {
-      pubClient.on('error', err => {
+    Promise.all([ioPubClient.connect(), ioSubClient.connect()]).then(() => {
+      ioPubClient.on('error', err => {
           console.log('Downstream Redis client connection error: ' + err);
+          process.exit(-1);
       });
-      subClient.on('error', err => {
+      ioSubClient.on('error', err => {
         console.log('Upstream Redis client connection error: ' + err);
+        process.exit(-1);
       });
-      io.adapter(createAdapter(pubClient, subClient));
+      io.adapter(createAdapter(ioPubClient, ioSubClient));
     });
     
-    subClient.on('error', (err) =>{
-      console.log(`Error occured while connecting upstream to redis server. Is it available at ${REDIS_URL}?`, err);
-      process.exit(-1);
-    });
-    pubClient.on('error', (err) =>{
-      console.log(`Error occured while connecting downstream to redis server. Is it available at ${REDIS_URL}?`, err);
-      process.exit(-1);
-    });
-
     //Redis healthCheck should be done via an external process, it is not a function of this gateway
     //Upon failure of Redis health, appropriate actions including restarting gateway should be performed.
    
     //Handle socket.io messages
-    io.on("connection", (socket) => {
-      console.log('Received socket.io connection');
+    io.on('connection',function(socket){
+      console.log('connection just made');
 
-      //The redis adapter will publish directly
-      // socket.on(DOWNSTREAM_MESSAGE), function (msg) {
-      //     console.log(`Received ${msg} from socket.io client`);
-      // };
-      
-      // socket.on(UPSTREAM_MESSAGE), function (msg) {
-      //     console.log(`Received ${msg} from socket.io client`);
-      // };
-    });
+      socket.on('disconnect', function () {
+        console.log('connection just closed');
+      });
 
-    //Handle HTTP REST calls
-    app.get('/', function(req, res) {
-      res.header('Content-Type: text/plain; charset=UTF-8');
-      res.status(403).end('Access denied');
-    });
-
-    app.get('/healthcheck', function(req, res) {
-      res.header('Content-type: application/json; charset=UTF-8');
-      const data = {
-        uptime: process.uptime(),
-        message: 'Ok',
-        date: new Date()
-      }
+      socket.on(DOWNSTREAM_MESSAGE, function (msg) {
+        console.log(msg);
+        ioPubClient.publish(DOWNSTREAM_MESSAGE, msg);
+      });
       
-      res.status(200).end(data.toString());
-    });
-
-    app.get('/'+DOWNSTREAM_MESSAGE, function(req, res) {
-      let payload = '{"fruit": "'+ req.query.fruit + '", "month": "' + req.query.month + '"}';
-      
-      //get the data and forward it to redis directly
-      pubClient.publish(DOWNSTREAM_MESSAGE, payload);
-      
-      //Listen for response from consumer and send it to http client
-      subClient.subscribe(UPSTREAM_MESSAGE, message => {
-        res.status(200).end(message);
+      ioSubClient.subscribe('harvest_line', message => {
+        console.log('Received Redis message', message);
+        socket.emit(UPSTREAM_MESSAGE, message);
       });
     });
   }

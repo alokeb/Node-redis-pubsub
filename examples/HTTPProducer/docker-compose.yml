@@ -2,6 +2,5 @@ version: '3.9'
 
 services:
   http-producer:
-    container_name: http-producer
     build: 
       context: .

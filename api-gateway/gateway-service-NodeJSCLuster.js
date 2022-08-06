@@ -13,15 +13,13 @@ const app = express();
 const httpServer = http.createServer(app);
 
 const { Server } = require("socket.io");
-const io = new Server(httpServer);
-  // , {
-  // cors: {
-  //   origin: "example.com",
-  //   methods: ["GET", "POST"],
-  //   credentials: true
-  // }
-// }
-// );
+const io = new Server(httpServer, {
+  cors: {
+    origin: "example.com",
+    methods: ["GET", "POST"],
+    credentials: true
+  }
+});
 
 //Gateway configuration
 const GATEWAY_PORT = 3000;
@@ -70,7 +68,9 @@ io.on('connection', function (socket) {
     console.log('worker pid:', process.pid, 'connection just closed');
   });
 
-  // socket.on('request', )
+  socket.on('request', function(request) {
+    console.log(request);
+  });
 
   socket.on(DOWNSTREAM_MESSAGE, function (msg) {
     console.log(msg);
@@ -83,11 +83,14 @@ io.on('connection', function (socket) {
 });
 
 //Handle HTTP REST calls
+
+//Allow all cross-origin requests...
 app.use(function(req, res, next) {
   res.header("Access-Control-Allow-Origin", "*");
   res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
   next();
 });
+
 app.get('/', function (req, res, next) {
   res.header('Content-Type: text/plain; charset=UTF-8');
   res.status(403).end('Access denied');

@@ -46,9 +46,7 @@ services:
     extends:
       file: api-gateway/docker-compose.yml
       service: api-gateway
-    #deploy:
-    #  mode: replicated
-    #  replicas: 4 
+    
     depends_on:
       - redis
     environment:
@@ -100,23 +98,15 @@ services:
       - "3000"
 
   http-producer:
-    container_name: http-producer
-    hostname: http-producer
+    deploy:
+      mode: replicated
+      replicas: 4
     extends:
       file: examples/HTTPProducer/docker-compose.yml
       service: http-producer
     depends_on:
       - gateway-proxy
 
-  http-producer2:
-    container_name: http-producer2
-    hostname: http-producer2
-    extends:
-      file: examples/HTTPProducer/docker-compose.yml
-      service: http-producer
-    depends_on:
-      - gateway-proxy
-      
   socketio-producer:
     container_name: socketio-producer
     hostname: socketio-producer
@@ -126,15 +116,6 @@ services:
     depends_on:
       - gateway-proxy
       
-  socketio-producer2:
-    container_name: socketio-producer2
-    hostname: socketio-producer2
-    extends:
-      file: examples/SocketIOProducer/docker-compose.yml
-      service: socketio-producer
-    depends_on:
-      - gateway-proxy
-
   consumer:
     container_name: consumer
     hostname: consumer

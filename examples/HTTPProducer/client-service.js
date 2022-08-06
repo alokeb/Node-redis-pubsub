@@ -21,7 +21,7 @@ function publishMessage() {
   let currentMonth = values[1];
   
   axios.interceptors.request.use(request => {
-    console.log('Sending', request.params);
+    console.log('Request:', request.params);
     return request;
   });
   axios.interceptors.response.use(response => {
@@ -29,7 +29,7 @@ function publishMessage() {
     return response;
   });
 
-  axios.get('http://api-gateway:3000/harvest_line', {
+  axios.get('http://gateway-proxy/harvest_line', {
     headers:{Accept: 'text/html, application/json, text/plain, */*'},
     params: {
       fruit: currentFruit,

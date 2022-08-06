@@ -1,20 +1,5 @@
 version: '3.9'
 services:
   api-gateway:
-    container_name: api-gateway
-    
     build: 
       context: .
-      dockerfile: ./Gateway.Dockerfile
-
-
-  # If we decide to use nginx reverse proxy instead of Node JS socket.io cluster
-  #nginx:
-  #  container_name: nginx
-  #  build: 
-  #    dockerfile: ./Nginx.Dockerfile
-  #  ports:
-  #    - target: 80
-  #      published: 3000
-  #  depends_on:
-  #      - api-gateway

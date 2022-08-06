@@ -7,33 +7,98 @@ services:
     hostname: redis
     image: redis
     restart: always
-    ports:
-      - 6379:6379
+    expose:
+      - "6379"
 
   #Optional if you'd like a Redis client
   redisinsight:
     container_name: redisinsight
     hostname: redisinsight
     image: redislabs/redisinsight:latest
+    links:
+     - redis
     depends_on:
       - redis
     ports:
       - 8001:8001
     #Go to localhost:8001 in your browser, agree to their terms, then "I already have a redis database", enter 'redis' for host and 6379 as port if composing up via this file...
 
-  api-gateway:
-    container_name: api-gateway
-    hostname: api-gateway
+  gateway-proxy:
+    container_name: gateway-proxy
+    hostname: gateway-proxy
+    build: haproxy
+    links:
+     - api-gateway1
+     - api-gateway2
+     - api-gateway3
+     - api-gateway4
+    depends_on:
+     - api-gateway1
+     - api-gateway2
+     - api-gateway3
+     - api-gateway4
+    ports:
+     - "3000:80"
+
+  api-gateway1:
+    hostname: api-gateway1
+    container_name: api-gateway1
+    extends:
+      file: api-gateway/docker-compose.yml
+      service: api-gateway
+    #deploy:
+    #  mode: replicated
+    #  replicas: 4 
+    depends_on:
+      - redis
+    environment:
+      - NAME=api-gateway1
+    # - REDIS_URL= ...
+    expose:
+      - "3000"
+    
+  api-gateway2:
+    hostname: api-gateway2
+    container_name: api-gateway2
     extends:
       file: api-gateway/docker-compose.yml
       service: api-gateway
     depends_on:
       - redis
-    #environment:
+    environment:
+      - NAME=api-gateway2
     # - REDIS_URL= ...
-    ports:
-      - 3000:3000
-  
+    expose:
+      - "3000"
+      
+  api-gateway3:
+    hostname: api-gateway3
+    container_name: api-gateway3
+    extends:
+      file: api-gateway/docker-compose.yml
+      service: api-gateway
+    depends_on:
+      - redis
+    environment:
+      - NAME=api-gateway3
+    # - REDIS_URL= ...
+    expose:
+      - "3000"
+
+  api-gateway4:
+    hostname: api-gateway4
+    container_name: api-gateway4
+    extends:
+      file: api-gateway/docker-compose.yml
+      service: api-gateway
+    depends_on:
+      - redis
+    environment:
+      - NAME=api-gateway4
+    # - REDIS_URL= ...
+    expose:
+      - "3000"
+
   http-producer:
     container_name: http-producer
     hostname: http-producer
@@ -41,7 +106,7 @@ services:
       file: examples/HTTPProducer/docker-compose.yml
       service: http-producer
     depends_on:
-      - api-gateway
+      - gateway-proxy
 
   http-producer2:
     container_name: http-producer2
@@ -50,7 +115,7 @@ services:
       file: examples/HTTPProducer/docker-compose.yml
       service: http-producer
     depends_on:
-      - api-gateway
+      - gateway-proxy
       
   socketio-producer:
     container_name: socketio-producer
@@ -59,7 +124,7 @@ services:
       file: examples/SocketIOProducer/docker-compose.yml
       service: socketio-producer
     depends_on:
-      - api-gateway
+      - gateway-proxy
       
   socketio-producer2:
     container_name: socketio-producer2
@@ -68,7 +133,7 @@ services:
       file: examples/SocketIOProducer/docker-compose.yml
       service: socketio-producer
     depends_on:
-      - api-gateway
+      - gateway-proxy
 
   consumer:
     container_name: consumer
@@ -76,8 +141,10 @@ services:
     extends:
       file: examples/Consumer/docker-compose.yml
       service: consumer
+    links:
+     - redis
     depends_on:
-      - redis
+     - redis
     #environment:
     # - REDIS_URL= ...
 

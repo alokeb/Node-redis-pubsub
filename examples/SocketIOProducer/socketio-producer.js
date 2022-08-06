@@ -4,10 +4,13 @@ const fruitssize = fruits.length;
 const monthssize = months.length;
 const DOWNSTREAM_MESSAGE = process.env.DOWNSTREAM_MESSAGE||'harvest_line';
 const UPSTREAM_MESSAGE = process.env.UPSTREAM_MESSAGE||'processed_havest';
-const GATEWAY_URL = process.env.GATEWAY_URL||'http://api-gateway:3000';
+const GATEWAY_URL = process.env.GATEWAY_URL||'http://gateway-proxy';
 
 const {io} = require('socket.io-client');
-const socket = io.connect(GATEWAY_URL, {reconnect: true});
+const socket = io.connect(GATEWAY_URL, {
+  reconnect: true,
+  withCredentials: true
+});
 
 function getHarvestLine() {
   //Mock simulate a record read entry
@@ -31,7 +34,7 @@ socket.on("disconnect", (socket) => {
 });
 
 socket.on("connect", (socket) => {
-  //Whatever needs to be done upon connection...
+  console.log('Socket.io Producer connected to gateway');
 });
 
 socket.on(UPSTREAM_MESSAGE, (msg) => {

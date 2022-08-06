@@ -9,13 +9,15 @@ const http = require('http');
 
 //Setup express app
 const express = require('express');
+const session = require("express-session")
+let RedisStore = require("connect-redis")(session);
 const app = express();
 const httpServer = http.createServer(app);
 
 const { Server } = require("socket.io");
 const io = new Server(httpServer, {
   cors: {
-    origin: "localhost",
+    origin: "localhost:3000",
     methods: ["GET", "POST"],
     credentials: true
   }
@@ -34,7 +36,19 @@ const GATEWAY_PORT = 3000;
 //Redis configuration
 const REDIS_URL = process.env.REDIS_URL || { url: 'redis://redis:6379' };
 const redis = require('redis');
+
 const { createAdapter } = require("@socket.io/redis-adapter"); //https://github.com/socketio/socket.io-redis-adapter
+
+//Use redis as express session store...
+const sessionStoreClient = redis.createClient(REDIS_URL);
+app.use(
+  session({
+    store: new RedisStore({ client: sessionStoreClient }),
+    saveUninitialized: false,
+    secret: "grumpy gorilla",
+    resave: false,
+  })
+);
 
 // Security considerations
 //External
@@ -52,6 +66,7 @@ const { createAdapter } = require("@socket.io/redis-adapter"); //https://github.
 const pubClient = redis.createClient(REDIS_URL),
       subClient = pubClient.duplicate();
 
+//Default pub-sub clients for http and io requests...
 Promise.all([pubClient.connect(), subClient.connect()]).then(() => {
   pubClient.on('error', err => {
     console.log('Downstream Redis client connection error: ' + err);
@@ -61,7 +76,6 @@ Promise.all([pubClient.connect(), subClient.connect()]).then(() => {
     console.log('Upstream Redis client connection error: ' + err);
     process.exit(-1);
   });
-  io.adapter(createAdapter(pubClient, subClient));
 });
 
 //Redis healthCheck should be done via an external process, it is not a function of this gateway
@@ -88,8 +102,10 @@ if (!sticky.listen(httpServer, GATEWAY_PORT)) {
    
     //Handle socket.io messages
     io.on('connection',function(socket){
+      var room='';
       console.log(`connection just made from ${socket.id}`);
-      
+      socket.on('join', socket.join);
+
       socket.on('disconnect', function () {
         console.log(`connection ${socket.id} just closed`);
       });
@@ -101,7 +117,7 @@ if (!sticky.listen(httpServer, GATEWAY_PORT)) {
       
       subClient.subscribe(UPSTREAM_MESSAGE, message => {
         console.log(`Sending socket payload: ${message} to ${socket.id}`);
-        socket.emit(UPSTREAM_MESSAGE, message);
+        socket.to(room).emit(UPSTREAM_MESSAGE, message);
       });
     });
 };

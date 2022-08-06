@@ -5,6 +5,7 @@ const monthssize = months.length;
 const DOWNSTREAM_MESSAGE = process.env.DOWNSTREAM_MESSAGE||'harvest_line';
 const UPSTREAM_MESSAGE = process.env.UPSTREAM_MESSAGE||'processed_havest';
 const GATEWAY_URL = process.env.GATEWAY_URL||'http://api-gateway';
+const randomUUID = require('crypto').randomUUID();
 
 const {io} = require('socket.io-client');
 const socket = io.connect(GATEWAY_URL, {
@@ -25,6 +26,8 @@ var payload = '';
 function publishMessage() {
   payload = getHarvestLine();
   console.log(`Sending ${payload}`);
+  
+  socket.emit('join', randomUUID);
   socket.emit(DOWNSTREAM_MESSAGE, payload);
 }
 

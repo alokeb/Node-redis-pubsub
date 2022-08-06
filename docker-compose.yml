@@ -23,20 +23,16 @@ services:
       - 8001:8001
     #Go to localhost:8001 in your browser, agree to their terms, then "I already have a redis database", enter 'redis' for host and 6379 as port if composing up via this file...
 
-  gateway-proxy:
-    container_name: gateway-proxy
-    hostname: gateway-proxy
+  api-gateway:
+    container_name: api-gateway
+    hostname: api-gateway
     build: haproxy
     links:
      - api-gateway1
      - api-gateway2
-     - api-gateway3
-     - api-gateway4
     depends_on:
      - api-gateway1
      - api-gateway2
-     - api-gateway3
-     - api-gateway4
     ports:
      - "3000:80"
 
@@ -68,53 +64,26 @@ services:
     # - REDIS_URL= ...
     expose:
       - "3000"
-      
-  api-gateway3:
-    hostname: api-gateway3
-    container_name: api-gateway3
-    extends:
-      file: api-gateway/docker-compose.yml
-      service: api-gateway
-    depends_on:
-      - redis
-    environment:
-      - NAME=api-gateway3
-    # - REDIS_URL= ...
-    expose:
-      - "3000"
-
-  api-gateway4:
-    hostname: api-gateway4
-    container_name: api-gateway4
-    extends:
-      file: api-gateway/docker-compose.yml
-      service: api-gateway
-    depends_on:
-      - redis
-    environment:
-      - NAME=api-gateway4
-    # - REDIS_URL= ...
-    expose:
-      - "3000"
 
   http-producer:
     deploy:
       mode: replicated
-      replicas: 4
+      replicas: 2
     extends:
       file: examples/HTTPProducer/docker-compose.yml
       service: http-producer
     depends_on:
-      - gateway-proxy
+      - api-gateway
 
   socketio-producer:
-    container_name: socketio-producer
-    hostname: socketio-producer
+    deploy:
+      mode: replicated
+      replicas: 2
     extends:
       file: examples/SocketIOProducer/docker-compose.yml
       service: socketio-producer
     depends_on:
-      - gateway-proxy
+      - api-gateway
       
   consumer:
     container_name: consumer

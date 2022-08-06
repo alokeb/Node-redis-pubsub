@@ -15,11 +15,18 @@ const httpServer = http.createServer(app);
 const { Server } = require("socket.io");
 const io = new Server(httpServer, {
   cors: {
-    origin: "example.com",
+    origin: "localhost",
     methods: ["GET", "POST"],
     credentials: true
   }
 });
+
+// //Allow all cross-origin requests...
+// app.use(function(req, res, next) {
+//   res.header("Access-Control-Allow-Origin", "*");
+//   res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+//   next();
+// });
 
 //Gateway configuration
 const GATEWAY_PORT = 3000;
@@ -27,7 +34,7 @@ const GATEWAY_PORT = 3000;
 //Redis configuration
 const REDIS_URL = process.env.REDIS_URL || { url: 'redis://redis:6379' };
 const redis = require('redis');
-const { createAdapter } = require("@socket.io/redis-adapter"); //https://github.com/socketio/socket.io-redis-adapter#migrating-from-socketio-redis
+const { createAdapter } = require("@socket.io/redis-adapter"); //https://github.com/socketio/socket.io-redis-adapter
 
 // Security considerations
 //External
@@ -61,36 +68,45 @@ Promise.all([pubClient.connect(), subClient.connect()]).then(() => {
 //Upon failure of Redis health, appropriate actions including restarting gateway should be performed.
 
 //Handle socket.io messages
-io.on('connection', function (socket) {
-  console.log('Connection just made to server:', serverName);
+//Setup sticky session cluster
+var sticky = require('sticky-session'); //https://socket.io/docs/v4/using-multiple-nodes/#why-is-sticky-session-required
+if (!sticky.listen(httpServer, GATEWAY_PORT)) { 
+  // Master code
 
-  socket.on('disconnect', function () {
-    console.log('worker pid:', process.pid, 'connection just closed');
+  
+  httpServer.once('listening', function() {
+    console.log(`Server ${serverName} listening at port ${GATEWAY_PORT}`);
   });
+} else {
+    //Cluster worker setup and code goes here...
+      
+    //Setup Redis pub sub connections
+    io.adapter(createAdapter(pubClient, subClient));  
+    
+    //Redis healthCheck should be done via an external process, it is not a function of this gateway
+    //Upon failure of Redis health, appropriate actions including restarting gateway should be performed.
+   
+    //Handle socket.io messages
+    io.on('connection',function(socket){
+      console.log(`connection just made from ${socket.id}`);
+      
+      socket.on('disconnect', function () {
+        console.log(`connection ${socket.id} just closed`);
+      });
 
-  socket.on('request', function(request) {
-    console.log(request);
-  });
-
-  socket.on(DOWNSTREAM_MESSAGE, function (msg) {
-    console.log(msg);
-    io.broadcast(DOWNSTREAM_MESSAGE, msg);
-  });
-  socket.on(UPSTREAM_MESSAGE, function (msg) {
-    console.log(msg);
-    io.emit(UPSTREAM_MESSAGE, msg);
-  });
-});
+      socket.on(DOWNSTREAM_MESSAGE, function (msg) {
+        console.log(`Received socket payload:  ${msg} from ${socket.id}`);
+        pubClient.publish(DOWNSTREAM_MESSAGE, msg);
+      });
+      
+      subClient.subscribe(UPSTREAM_MESSAGE, message => {
+        console.log(`Sending socket payload: ${message} to ${socket.id}`);
+        socket.emit(UPSTREAM_MESSAGE, message);
+      });
+    });
+};
 
 //Handle HTTP REST calls
-
-//Allow all cross-origin requests...
-app.use(function(req, res, next) {
-  res.header("Access-Control-Allow-Origin", "*");
-  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
-  next();
-});
-
 app.get('/', function (req, res, next) {
   res.header('Content-Type: text/plain; charset=UTF-8');
   res.status(403).end('Access denied');
@@ -111,7 +127,3 @@ app.get('/' + DOWNSTREAM_MESSAGE, function (req, res, next) {
     res.status(200).end(message);
   });
 }); 
-
-app.listen(GATEWAY_PORT, function () {
-  console.log(`Server ${serverName} listening at port ${GATEWAY_PORT}`);
-});

@@ -2,6 +2,5 @@ version: '3.9'
 
 services:
   socketio-producer:
-    container_name: socketio-producer
     build: 
       context: .

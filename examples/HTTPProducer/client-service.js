@@ -20,7 +20,7 @@ function publishMessage() {
   let currentFruit = values[0];
   let currentMonth = values[1];
 
-  axios.get('http://gateway-proxy/harvest_line', {
+  axios.get('http://api-gateway/harvest_line', {
     headers: { Accept: 'text/html, application/json, text/plain, */*' },
     params: {
       fruit: currentFruit,
@@ -34,4 +34,4 @@ function publishMessage() {
 }
 
 //Make HTTP requests at random times
-setInterval(publishMessage, Math.floor(Math.random()*1000));
+setInterval(publishMessage, Math.floor(Math.random()*10000));

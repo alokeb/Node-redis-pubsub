@@ -15,6 +15,7 @@ const httpServer = http.createServer(app);
 
 const { Server } = require("socket.io");
 const io = new Server(httpServer, {
+  transports: ["websocket"], //Polling not allowed
   cors: {
     origin: "localhost:3000",
     methods: ["GET", "POST"],
@@ -77,20 +78,21 @@ io.adapter(createAdapter(httppubClient, httpsubClient));
 
 //Handle socket.io messages
 io.on('connection', function (socket) {
-  var room = '';
   console.log(`connection just made from ${socket.id}`);
 
   socket.on('disconnect', function () {
     console.log(`connection ${socket.id} just closed`);
   });
 
+  
   socket.on(DOWNSTREAM_MESSAGE, function (msg) {
-    console.log(`Received socket payload:  ${msg} from ${socket.id}`);
+    //console.log(`Received socket payload:  ${msg} from ${socket.id}`);
     iopubClient.publish(DOWNSTREAM_MESSAGE, msg);
   });
+  
 
   iosubClient.subscribe(UPSTREAM_MESSAGE, message => {
-    console.log(`Sending socket payload: ${message} to ${socket.id}`);
+    //console.log(`Sending socket payload: ${message} to ${socket.id}`);
     socket.emit(UPSTREAM_MESSAGE, message);
   });
 });

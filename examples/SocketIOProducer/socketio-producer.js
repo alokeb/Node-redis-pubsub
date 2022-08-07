@@ -9,6 +9,7 @@ const randomUUID = require('crypto').randomUUID();
 
 const {io} = require('socket.io-client');
 const socket = io.connect(GATEWAY_URL, {
+  transports: ["websocket"], //Polling not allowed
   reconnect: true,
   withCredentials: true
 });
@@ -25,22 +26,20 @@ function getHarvestLine() {
 var payload = '';
 function publishMessage() {
   payload = getHarvestLine();
-  console.log(`Sending ${payload}`);
-  
+   
   socket.emit(DOWNSTREAM_MESSAGE, payload);
 }
 
 socket.on("disconnect", (socket) => {
-  //console.log(`Socket disconnected from gateway`);
+  console.log(`Socket disconnected from gateway`);
 });
 
 socket.on("connect", (socket) => {
   console.log(`Socket connected to gateway`); 
 });
 
-
 socket.on(UPSTREAM_MESSAGE, (msg) => {
-  console.log(`Received ${msg}`);
+  console.log(`Sent ${payload}, Received ${msg}`);
 });
 
 setInterval(publishMessage, Math.floor(Math.random()*10000));

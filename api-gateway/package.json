@@ -8,10 +8,9 @@
     "connect-redis": "^6.1.3",
     "redis": "^4.2.0",
     "socket.io": "^4.5.1",
-    "@socket.io/redis-adapter": "^7.2.0",
-    "sticky-session": "^1.1.2"
+    "@socket.io/redis-adapter": "^7.2.0"
   },
   "scripts": {
-    "start": "DEBUG=socket.io* node gateway-service-NodeJSCLuster.js"
+    "start": "node gateway-service-NodeJSCLuster.js"
   }
 }

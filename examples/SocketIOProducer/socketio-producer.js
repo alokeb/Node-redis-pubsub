@@ -27,17 +27,17 @@ function publishMessage() {
   payload = getHarvestLine();
   console.log(`Sending ${payload}`);
   
-  socket.emit('join', randomUUID);
   socket.emit(DOWNSTREAM_MESSAGE, payload);
 }
 
 socket.on("disconnect", (socket) => {
-  console.log(`Socket disconnected from gateway`);
+  //console.log(`Socket disconnected from gateway`);
 });
 
 socket.on("connect", (socket) => {
-  console.log(`Socket connected to gateway`);
+  console.log(`Socket connected to gateway`); 
 });
+
 
 socket.on(UPSTREAM_MESSAGE, (msg) => {
   console.log(`Received ${msg}`);

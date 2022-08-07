@@ -5,7 +5,6 @@ var serverName = process.env.NAME || 'Unknown';
 
 //Node core
 const http = require('http');
-// const cluster = require('cluster');
 
 //Setup express app
 const express = require('express');
@@ -23,13 +22,6 @@ const io = new Server(httpServer, {
   }
 });
 
-// //Allow all cross-origin requests...
-// app.use(function(req, res, next) {
-//   res.header("Access-Control-Allow-Origin", "*");
-//   res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
-//   next();
-// });
-
 //Gateway configuration
 const GATEWAY_PORT = 3000;
 
@@ -39,7 +31,7 @@ const redis = require('redis');
 
 const { createAdapter } = require("@socket.io/redis-adapter"); //https://github.com/socketio/socket.io-redis-adapter
 
-//Use redis as express session store...
+//Use redis as session store...
 const sessionStoreClient = redis.createClient(REDIS_URL);
 app.use(
   session({
@@ -63,64 +55,45 @@ app.use(
 // }
 
 //Setup Redis pub sub connections and socket.io adapter
-const pubClient = redis.createClient(REDIS_URL),
-      subClient = pubClient.duplicate();
+const httppubClient = redis.createClient(REDIS_URL),
+      httpsubClient = httppubClient.duplicate(),
+      iopubClient = redis.createClient(REDIS_URL),
+      iosubClient = iopubClient.duplicate();
 
-//Default pub-sub clients for http and io requests...
-Promise.all([pubClient.connect(), subClient.connect()]).then(() => {
-  pubClient.on('error', err => {
+//pub-sub clients io requests...
+Promise.all([iopubClient.connect(), iosubClient.connect()]).then(() => {
+  httppubClient.on('error', err => {
     console.log('Downstream Redis client connection error: ' + err);
     process.exit(-1);
   });
-  subClient.on('error', err => {
+  httpsubClient.on('error', err => {
     console.log('Upstream Redis client connection error: ' + err);
     process.exit(-1);
   });
 });
 
-//Redis healthCheck should be done via an external process, it is not a function of this gateway
-//Upon failure of Redis health, appropriate actions including restarting gateway should be performed.
+//Setup Redis pub sub connections
+io.adapter(createAdapter(httppubClient, httpsubClient));
 
 //Handle socket.io messages
-//Setup sticky session cluster
-var sticky = require('sticky-session'); //https://socket.io/docs/v4/using-multiple-nodes/#why-is-sticky-session-required
-if (!sticky.listen(httpServer, GATEWAY_PORT)) { 
-  // Master code
+io.on('connection', function (socket) {
+  var room = '';
+  console.log(`connection just made from ${socket.id}`);
 
-  
-  httpServer.once('listening', function() {
-    console.log(`Server ${serverName} listening at port ${GATEWAY_PORT}`);
+  socket.on('disconnect', function () {
+    console.log(`connection ${socket.id} just closed`);
   });
-} else {
-    //Cluster worker setup and code goes here...
-      
-    //Setup Redis pub sub connections
-    io.adapter(createAdapter(pubClient, subClient));  
-    
-    //Redis healthCheck should be done via an external process, it is not a function of this gateway
-    //Upon failure of Redis health, appropriate actions including restarting gateway should be performed.
-   
-    //Handle socket.io messages
-    io.on('connection',function(socket){
-      var room='';
-      console.log(`connection just made from ${socket.id}`);
-      socket.on('join', socket.join);
 
-      socket.on('disconnect', function () {
-        console.log(`connection ${socket.id} just closed`);
-      });
+  socket.on(DOWNSTREAM_MESSAGE, function (msg) {
+    console.log(`Received socket payload:  ${msg} from ${socket.id}`);
+    iopubClient.publish(DOWNSTREAM_MESSAGE, msg);
+  });
 
-      socket.on(DOWNSTREAM_MESSAGE, function (msg) {
-        console.log(`Received socket payload:  ${msg} from ${socket.id}`);
-        pubClient.publish(DOWNSTREAM_MESSAGE, msg);
-      });
-      
-      subClient.subscribe(UPSTREAM_MESSAGE, message => {
-        console.log(`Sending socket payload: ${message} to ${socket.id}`);
-        socket.to(room).emit(UPSTREAM_MESSAGE, message);
-      });
-    });
-};
+  iosubClient.subscribe(UPSTREAM_MESSAGE, message => {
+    console.log(`Sending socket payload: ${message} to ${socket.id}`);
+    socket.emit(UPSTREAM_MESSAGE, message);
+  });
+});
 
 //Handle HTTP REST calls
 app.get('/', function (req, res, next) {
@@ -128,6 +101,20 @@ app.get('/', function (req, res, next) {
   res.status(403).end('Access denied');
 });
 
+//pub-sub clients for http requests...
+Promise.all([httppubClient.connect(), httpsubClient.connect()]).then(() => {
+  httppubClient.on('error', err => {
+    console.log('Downstream Redis client connection error: ' + err);
+    process.exit(-1);
+  });
+  httpsubClient.on('error', err => {
+    console.log('Upstream Redis client connection error: ' + err);
+    process.exit(-1);
+  });
+});
+
+//Redis healthCheck should be done via an external process, it is not a function of this gateway
+//Upon failure of Redis health, appropriate actions including restarting gateway should be performed.
 app.head('/health', function (req, res, next) {
   res.sendStatus(200);
 });
@@ -136,10 +123,14 @@ app.get('/' + DOWNSTREAM_MESSAGE, function (req, res, next) {
   let payload = '{"fruit": "' + req.query.fruit + '", "month": "' + req.query.month + '"}';
 
   //get the data and forward it to redis directly
-  pubClient.publish(DOWNSTREAM_MESSAGE, payload);
+  httppubClient.publish(DOWNSTREAM_MESSAGE, payload);
 
   //Listen for response from consumer and send it to http client
-  subClient.subscribe(UPSTREAM_MESSAGE, message => {
+  httpsubClient.subscribe(UPSTREAM_MESSAGE, message => {
     res.status(200).end(message);
   });
-}); 
+});
+
+httpServer.listen(GATEWAY_PORT, function () {
+  console.log(`Server ${serverName} listening at port ${GATEWAY_PORT}`);
+});

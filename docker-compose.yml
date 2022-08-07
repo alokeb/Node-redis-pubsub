@@ -35,6 +35,8 @@ services:
      - api-gateway2
     ports:
      - "3000:80"
+     #Stats port
+     - "8000:8000"
 
   api-gateway1:
     hostname: api-gateway1
@@ -42,7 +44,6 @@ services:
     extends:
       file: api-gateway/docker-compose.yml
       service: api-gateway
-    
     depends_on:
       - redis
     environment:
@@ -97,5 +98,4 @@ services:
      - redis
     #environment:
     # - REDIS_URL= ...
-
  

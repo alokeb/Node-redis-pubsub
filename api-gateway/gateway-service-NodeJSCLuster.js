@@ -78,21 +78,23 @@ io.adapter(createAdapter(httppubClient, httpsubClient));
 
 //Handle socket.io messages
 io.on('connection', function (socket) {
-  console.log(`connection just made from ${socket.id}`);
+  console.log(`connection made from ${socket.id}`);
 
   socket.on('disconnect', function () {
-    console.log(`connection ${socket.id} just closed`);
+    console.log(`connection ${socket.id} closed`);
   });
 
-  
   socket.on(DOWNSTREAM_MESSAGE, function (msg) {
     //console.log(`Received socket payload:  ${msg} from ${socket.id}`);
     iopubClient.publish(DOWNSTREAM_MESSAGE, msg);
   });
-  
 
   iosubClient.subscribe(UPSTREAM_MESSAGE, message => {
     //console.log(`Sending socket payload: ${message} to ${socket.id}`);
+
+    //This is sending the message to all subscribing sockets, when everything I've read so far suggests it shouldn't. Have asked on StackOverflow:
+
+    //https://stackoverflow.com/questions/73271346/socket-io-send-notification-only-to-request-initiator
     socket.emit(UPSTREAM_MESSAGE, message);
   });
 });

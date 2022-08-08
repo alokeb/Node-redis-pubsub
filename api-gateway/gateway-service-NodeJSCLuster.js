@@ -56,25 +56,23 @@ app.use(
 // }
 
 //Setup Redis pub sub connections and socket.io adapter
-const httpPubClient = redis.createClient(REDIS_URL),
-      httpSubClient = httpPubClient.duplicate(),
-      ioPubClient = redis.createClient(REDIS_URL),
-      ioSubClient = ioPubClient.duplicate();
+const pubClient = redis.createClient(REDIS_URL),
+      subClient = pubClient.duplicate();
 
-//pub-sub clients io requests...
-Promise.all([ioPubClient.connect(), ioSubClient.connect()]).then(() => {
-  httpPubClient.on('error', err => {
+//Setup pub-sub clients ...
+Promise.all([pubClient.connect(), subClient.connect()]).then(() => {
+  pubClient.on('error', err => {
     console.log('Downstream Redis client connection error: ' + err);
     process.exit(-1);
   });
-  httpSubClient.on('error', err => {
+  subClient.on('error', err => {
     console.log('Upstream Redis client connection error: ' + err);
     process.exit(-1);
   });
 });
 
 //Setup Redis pub sub connections
-io.adapter(createAdapter(ioPubClient, ioSubClient));
+io.adapter(createAdapter(pubClient, subClient));
 
 //Handle socket.io messages
 io.on('connection', function (socket) {
@@ -93,10 +91,10 @@ io.on('connection', function (socket) {
   socket.on(DOWNSTREAM_MESSAGE, function (msg) {
     //console.log(`Received socket payload:  ${msg} from ${socket.id}. Redis downstream channel ${socketRedisDownstreamChannel}, Redis upstream channel: ${socketRedisUpstreamChannel}`);
     
-    ioPubClient.publish(socketRedisDownstreamChannel, msg);
+    pubClient.publish(socketRedisDownstreamChannel, msg);
   });
   
-  ioSubClient.subscribe(socketRedisUpstreamChannel, redismessage => {
+  subClient.subscribe(socketRedisUpstreamChannel, redismessage => {
     socket.emit(UPSTREAM_MESSAGE, redismessage);
   });
 });
@@ -106,18 +104,6 @@ io.on('connection', function (socket) {
 app.get('/', function (req, res, next) {
   res.header('Content-Type: text/plain; charset=UTF-8');
   res.status(403).end('Access denied');
-});
-
-//pub-sub clients for http requests...
-Promise.all([httpPubClient.connect(), httpSubClient.connect()]).then(() => {
-  httpPubClient.on('error', err => {
-    console.log('Downstream Redis client connection error: ' + err);
-    process.exit(-1);
-  });
-  httpSubClient.on('error', err => {
-    console.log('Upstream Redis client connection error: ' + err);
-    process.exit(-1);
-  });
 });
 
 //Redis healthCheck is being performed via HAProxy providing application healthCheck hook
@@ -130,10 +116,10 @@ app.get('/' + DOWNSTREAM_MESSAGE, function (req, res) {
   const httpRedisUpstreamChannel = `${UPSTREAM_MESSAGE}.${DOWNSTREAM_MESSAGE}.http`
 
   //get the data and forward it to redis directly
-  httpPubClient.publish(`${DOWNSTREAM_MESSAGE}.http`, payload);
+  pubClient.publish(`${DOWNSTREAM_MESSAGE}.http`, payload);
 
   //Listen for response from consumer and send it to http client
-  httpSubClient.subscribe(httpRedisUpstreamChannel, message => {
+  subClient.subscribe(httpRedisUpstreamChannel, message => {
     res.status(200).end(message);
   });
 });

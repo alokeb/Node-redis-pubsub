@@ -33,7 +33,7 @@ function publishMessage() {
     }
   }).then(res => {
     if (!res.data.toString().includes(currentFruit) || !res.data.toString().includes(currentMonth)) {
-      console.log(`ERROR: Sent ${currentFruit}, ${currentMonth}. Received ${msg}`);
+      console.error(`ERROR: Sent ${currentFruit}, ${currentMonth}. Received ${res.data}`);
     };
   });
 }

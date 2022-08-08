@@ -53,8 +53,8 @@ socket.on('connect_ack', (sessionid) => {
 
 socket.on(UPSTREAM_MESSAGE, (msg) => {
   if (!payload.toString().includes(fruit) || !payload.toString().includes(month)) {
-    console.log(`ERROR: Sent ${payload}, Received ${msg}`);
-  }
+    console.error(`ERROR: Sent ${payload}, Received ${msg}`);
+  };
 });
 
 setInterval(publishMessage, Math.floor(Math.random()*10000));

@@ -13,6 +13,7 @@ const socket = io.connect(GATEWAY_URL, {
   reconnect: true,
   withCredentials: true
 });
+var id='';
 
 function getHarvestLine() {
   //Mock simulate a record read entry
@@ -23,10 +24,12 @@ function getHarvestLine() {
   let month = months[currentMonth];
   return JSON.stringify({fruit, month});
 }
-var payload = '';
+let payload;
+var id = '';
+
 function publishMessage() {
   payload = getHarvestLine();
-   
+  
   socket.emit(DOWNSTREAM_MESSAGE, payload);
 }
 
@@ -36,6 +39,11 @@ socket.on("disconnect", (socket) => {
 
 socket.on("connect", (socket) => {
   console.log(`Socket connected to gateway`); 
+});
+
+socket.on('connect_ack', (sessionid) => {
+  id = sessionid;
+  console.log(`my session id: ${sessionid}, id: ${id}`);
 });
 
 socket.on(UPSTREAM_MESSAGE, (msg) => {

@@ -80,22 +80,25 @@ io.adapter(createAdapter(httppubClient, httpsubClient));
 io.on('connection', function (socket) {
   console.log(`connection made from ${socket.id}`);
 
+  //Send socket session id
+  socket.emit('connect_ack', socket.id);
+
   socket.on('disconnect', function () {
     console.log(`connection ${socket.id} closed`);
   });
 
+  const socketRedisDownstreamChannel = `${DOWNSTREAM_MESSAGE}.${socket.id}`;
+  const socketRedisUpstreamChannel = `${UPSTREAM_MESSAGE}.${DOWNSTREAM_MESSAGE}.${socket.id}`;
+
   socket.on(DOWNSTREAM_MESSAGE, function (msg) {
-    //console.log(`Received socket payload:  ${msg} from ${socket.id}`);
-    iopubClient.publish(DOWNSTREAM_MESSAGE, msg);
+    //console.log(`Received socket payload:  ${msg} from ${socket.id}. Redis downstream channel ${socketRedisDownstreamChannel}, Redis upstream channel: ${socketRedisUpstreamChannel}`);
+    
+    iopubClient.publish(socketRedisDownstreamChannel, msg);
   });
+  
+  iosubClient.subscribe(socketRedisUpstreamChannel, redismessage => {
 
-  iosubClient.subscribe(UPSTREAM_MESSAGE, message => {
-    //console.log(`Sending socket payload: ${message} to ${socket.id}`);
-
-    //This is sending the message to all subscribing sockets, when everything I've read so far suggests it shouldn't. Have asked on StackOverflow:
-
-    //https://stackoverflow.com/questions/73271346/socket-io-send-notification-only-to-request-initiator
-    socket.emit(UPSTREAM_MESSAGE, message);
+    socket.emit(UPSTREAM_MESSAGE, redismessage);
   });
 });
 

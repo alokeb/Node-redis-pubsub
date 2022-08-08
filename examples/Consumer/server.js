@@ -11,8 +11,8 @@ Promise.all([pubClient.connect(), subClient.connect()]).then(() => {
     console.log('Upstream Redis client connection error: ' + err);
   });
   
-  subClient.subscribe('harvest_line', message => {
-    //console.log('Received Redis message', message);
+  subClient.pSubscribe('harvest_line.*', (message, channel) => {
+    //console.log('Received Redis message', message, ` on ${channel}`);
    
     //Just doing some random processing here... keeping a count of how many times a particular fruit and a particular month were encountered
     const obj = JSON.parse(message);
@@ -27,6 +27,7 @@ Promise.all([pubClient.connect(), subClient.connect()]).then(() => {
       pubClient.incr(obj.month);
     }
 
-    pubClient.publish('processed_havest', `ACK: Updated ${obj.fruit}, ${obj.month}`);
+    //console.log(`Publishing to processed_harvest.${channel}`)
+    pubClient.publish(`processed_havest.${channel}`, `ACK: Updated ${obj.fruit}, ${obj.month}`);
   });
 });

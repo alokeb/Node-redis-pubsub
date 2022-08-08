@@ -24,12 +24,17 @@ function getHarvestLine() {
   let month = months[currentMonth];
   return JSON.stringify({fruit, month});
 }
-let payload;
-var id = '';
+var payload;
+var id;
+var fruit;
+var month;
 
 function publishMessage() {
   payload = getHarvestLine();
-  
+
+  fruit = JSON.parse(payload).fruit;
+  month = JSON.parse(payload).month;
+
   socket.emit(DOWNSTREAM_MESSAGE, payload);
 }
 
@@ -43,11 +48,13 @@ socket.on("connect", (socket) => {
 
 socket.on('connect_ack', (sessionid) => {
   id = sessionid;
-  console.log(`my session id: ${sessionid}, id: ${id}`);
+  console.log(`my session id is: ${id}`);
 });
 
 socket.on(UPSTREAM_MESSAGE, (msg) => {
-  console.log(`Sent ${payload}, Received ${msg}`);
+  if (!payload.toString().includes(fruit) || !payload.toString().includes(month)) {
+    console.log(`ERROR: Sent ${payload}, Received ${msg}`);
+  }
 });
 
 setInterval(publishMessage, Math.floor(Math.random()*10000));

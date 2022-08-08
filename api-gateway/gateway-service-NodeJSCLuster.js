@@ -74,7 +74,7 @@ Promise.all([iopubClient.connect(), iosubClient.connect()]).then(() => {
 });
 
 //Setup Redis pub sub connections
-io.adapter(createAdapter(httppubClient, httpsubClient));
+io.adapter(createAdapter(iopubClient, iosubClient));
 
 //Handle socket.io messages
 io.on('connection', function (socket) {
@@ -97,10 +97,10 @@ io.on('connection', function (socket) {
   });
   
   iosubClient.subscribe(socketRedisUpstreamChannel, redismessage => {
-
     socket.emit(UPSTREAM_MESSAGE, redismessage);
   });
 });
+
 
 //Handle HTTP REST calls
 app.get('/', function (req, res, next) {
@@ -126,9 +126,10 @@ app.head('/health', function (req, res, next) {
   res.sendStatus(200);
 });
 
-app.get('/' + DOWNSTREAM_MESSAGE, function (req, res, next) {
+app.get('/' + DOWNSTREAM_MESSAGE, function (req, res) {
   let payload = '{"fruit": "' + req.query.fruit + '", "month": "' + req.query.month + '"}';
 
+  console.log('Received HTTP payload', payload);
   //get the data and forward it to redis directly
   httppubClient.publish(DOWNSTREAM_MESSAGE, payload);
 

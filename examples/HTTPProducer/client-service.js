@@ -15,6 +15,11 @@ function getHarvestLine() {
   return [fruit, month];
 }
 
+process.on('unhandledRejection', (reason, promise) => {
+  console.log('Unhandled Rejection at:', promise, 'reason:', reason);
+  // Application specific logging, throwing an error, or other logic here
+});
+
 function publishMessage() {
   const values = getHarvestLine();
   let currentFruit = values[0];
@@ -27,10 +32,11 @@ function publishMessage() {
       month: currentMonth
     }
   }).then(res => {
-    //Process the response as you see fit...
-    console.log(`Request contained ${currentFruit}, ${currentMonth}. Response: ${res.data}`)
+    if (!res.data.toString().includes(currentFruit) || !res.data.toString().includes(currentMonth)) {
+      console.log(`ERROR: Sent ${currentFruit}, ${currentMonth}. Received ${msg}`);
+    };
   });
 }
 
 //Make HTTP requests at random times
-setInterval(publishMessage, Math.floor(Math.random()*10000));
+setInterval(publishMessage, 1000);

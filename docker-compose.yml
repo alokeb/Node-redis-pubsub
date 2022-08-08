@@ -32,6 +32,7 @@ services:
       - 8001:8001
     networks:
       - internal
+      - external
     #Go to localhost:8001 in your browser, agree to their terms, then "I already have a redis database", enter 'redis' for host and 6379 as port if composing up via this file...
 
   api-gateway1:
@@ -85,7 +86,7 @@ services:
   api-gateway:
     container_name: api-gateway
     hostname: api-gateway
-    build: haproxy
+    build: haproxy #Stats at http://localhost:8000/haproxy?stats
     links:
      - api-gateway1
      - api-gateway2

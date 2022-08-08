@@ -27,7 +27,6 @@ Promise.all([pubClient.connect(), subClient.connect()]).then(() => {
       pubClient.incr(obj.month);
     }
 
-    //console.log(`Publishing to processed_harvest.${channel}`)
     pubClient.publish(`processed_havest.${channel}`, `ACK: Updated ${obj.fruit}, ${obj.month}`);
   });
 });

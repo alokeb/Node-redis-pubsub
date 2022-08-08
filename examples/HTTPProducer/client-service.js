@@ -39,4 +39,4 @@ function publishMessage() {
 }
 
 //Make HTTP requests at random times
-setInterval(publishMessage, 1000);
+setInterval(publishMessage, Math.floor(Math.random()*10000));

@@ -1,5 +1,12 @@
 version: '3.9'
 
+networks:
+  internal:
+    internal: true
+    driver: bridge
+  external:
+    internal: false
+
 services:
  #On internal network
   redis:
@@ -9,6 +16,8 @@ services:
     restart: always
     expose:
       - "6379"
+    networks:
+      - internal
 
   #Optional if you'd like a Redis client
   redisinsight:
@@ -21,22 +30,9 @@ services:
       - redis
     ports:
       - 8001:8001
+    networks:
+      - internal
     #Go to localhost:8001 in your browser, agree to their terms, then "I already have a redis database", enter 'redis' for host and 6379 as port if composing up via this file...
-
-  api-gateway:
-    container_name: api-gateway
-    hostname: api-gateway
-    build: haproxy
-    links:
-     - api-gateway1
-     - api-gateway2
-    depends_on:
-     - api-gateway1
-     - api-gateway2
-    ports:
-     - "3000:80"
-     #Stats port
-     - "8000:8000"
 
   api-gateway1:
     hostname: api-gateway1
@@ -51,6 +47,8 @@ services:
     # - REDIS_URL= ...
     expose:
       - "3000"
+    networks:
+      - internal
     
   api-gateway2:
     hostname: api-gateway2
@@ -65,7 +63,44 @@ services:
     # - REDIS_URL= ...
     expose:
       - "3000"
+    networks:
+      - internal
+  
+  consumer:
+    container_name: consumer
+    hostname: consumer
+    extends:
+      file: examples/Consumer/docker-compose.yml
+      service: consumer
+    links:
+    - redis
+    depends_on:
+    - redis
+    #environment:
+    # - REDIS_URL= ...
+    networks:
+      - internal
 
+  #Needs access to both internal and external networks
+  api-gateway:
+    container_name: api-gateway
+    hostname: api-gateway
+    build: haproxy
+    links:
+     - api-gateway1
+     - api-gateway2
+    depends_on:
+     - api-gateway1
+     - api-gateway2
+    ports:
+     - "3000:80"
+     #Stats port
+     - "8000:8000"
+    networks:
+      - internal
+      - external
+
+  #Should be on external network
   http-producer:
     deploy:
       mode: replicated
@@ -75,6 +110,8 @@ services:
       service: http-producer
     depends_on:
       - api-gateway
+    networks:
+      - external
 
   socketio-producer:
     deploy:
@@ -85,17 +122,5 @@ services:
       service: socketio-producer
     depends_on:
       - api-gateway
-      
-  consumer:
-    container_name: consumer
-    hostname: consumer
-    extends:
-      file: examples/Consumer/docker-compose.yml
-      service: consumer
-    links:
-     - redis
-    depends_on:
-     - redis
-    #environment:
-    # - REDIS_URL= ...
- 
+    networks:
+      - external

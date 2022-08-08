@@ -19,7 +19,7 @@ function publishMessage() {
   const values = getHarvestLine();
   let currentFruit = values[0];
   let currentMonth = values[1];
-
+  
   axios.get('http://api-gateway/harvest_line', {
     headers: { Accept: 'text/html, application/json, text/plain, */*' },
     params: {
@@ -29,7 +29,6 @@ function publishMessage() {
   }).then(res => {
     //Process the response as you see fit...
     console.log(`Request contained ${currentFruit}, ${currentMonth}. Response: ${res.data}`)
-    res.end;
   });
 }
 
